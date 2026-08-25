@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
-const PUBLIC_PATHS = ["/login", "/api/auth/login"];
+// /api/cron/* routes authenticate themselves via a `?secret=CRON_SECRET`
+// query param (external schedulers can't carry a session cookie), so they're
+// excluded from the session check here rather than in each route handler.
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/cron"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
