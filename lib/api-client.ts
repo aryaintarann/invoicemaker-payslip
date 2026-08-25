@@ -30,7 +30,7 @@ export type Employee = {
 export type Invoice = {
   id: number;
   clientId: number;
-  invoiceNumber: string;
+  invoiceNumber: string | null;
   entity: "cv" | "op";
   kind: "dp" | "termin1" | "termin2" | "final";
   language: "id" | "en";

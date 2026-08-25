@@ -47,7 +47,7 @@ export default function InvoicesPage() {
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return (
-      inv.invoiceNumber.toLowerCase().includes(q) ||
+      (inv.invoiceNumber || "").toLowerCase().includes(q) ||
       (inv.client?.name || "").toLowerCase().includes(q) ||
       inv.projectName.toLowerCase().includes(q)
     );
@@ -135,7 +135,7 @@ export default function InvoicesPage() {
               <TableRow key={inv.id}>
                 <TableCell className="font-medium">
                   <Link href={`/invoices/${inv.id}`} className="hover:text-primary hover:underline">
-                    {inv.invoiceNumber}
+                    {inv.invoiceNumber || <span className="text-muted-foreground">—</span>}
                   </Link>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{inv.client?.name}</TableCell>
@@ -152,14 +152,14 @@ export default function InvoicesPage() {
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      aria-label={`Edit invoice ${inv.invoiceNumber}`}
+                      aria-label={`Edit invoice ${inv.invoiceNumber || inv.projectName}`}
                       nativeButton={false}
                       render={<Link href={`/invoices/${inv.id}/edit`} />}
                     >
                       <PencilSimple className="size-4" />
                     </Button>
                     <DeleteConfirmButton
-                      itemLabel={`invoice "${inv.invoiceNumber}"`}
+                      itemLabel={`invoice "${inv.invoiceNumber || inv.projectName}"`}
                       onConfirm={() => deleteMutation.mutate(inv.id)}
                     />
                   </div>

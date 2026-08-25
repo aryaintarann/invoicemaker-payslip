@@ -13,9 +13,11 @@ export const employeeInput = z.object({
   baseSalary: z.coerce.number().nonnegative(),
 });
 
-export const invoiceInput = z.object({
+const invoiceShape = z.object({
   clientId: z.coerce.number().int().positive(),
-  invoiceNumber: z.string().min(1),
+  // Required for entity "cv"; optional for "op" (individual clients aren't
+  // always issued a formal invoice number) — enforced in invoiceInput below.
+  invoiceNumber: z.string().optional().or(z.literal("")).transform((v) => v || undefined),
   entity: z.enum(["cv", "op"]),
   kind: z.enum(["dp", "termin1", "termin2", "final"]),
   language: z.enum(["id", "en"]).optional().default("id"),
@@ -32,7 +34,17 @@ export const invoiceInput = z.object({
   pphDeadline: z.string().optional(),
 });
 
-export const invoiceUpdateInput = invoiceInput.partial();
+export const invoiceInput = invoiceShape.superRefine((data, ctx) => {
+  if (data.entity !== "op" && !data.invoiceNumber) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["invoiceNumber"],
+      message: "No. Invoice wajib diisi untuk entity CV",
+    });
+  }
+});
+
+export const invoiceUpdateInput = invoiceShape.partial();
 
 export const payslipInput = z.object({
   employeeId: z.coerce.number().int().positive(),

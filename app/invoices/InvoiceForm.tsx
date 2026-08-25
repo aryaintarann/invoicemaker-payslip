@@ -195,10 +195,13 @@ export function InvoiceForm({
           </Field>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="No. Invoice" htmlFor="invoiceNumber">
+            <Field
+              label={form.entity === "op" ? "No. Invoice (opsional untuk OP)" : "No. Invoice"}
+              htmlFor="invoiceNumber"
+            >
               <Input
                 id="invoiceNumber"
-                required
+                required={form.entity !== "op"}
                 value={form.invoiceNumber}
                 onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })}
               />

@@ -38,7 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       total: invoice.total,
     });
 
-    const safeName = invoice.invoiceNumber.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const safeName = (invoice.invoiceNumber ?? String(invoice.id)).replace(/[^a-zA-Z0-9._-]/g, "_");
 
     if (wantsPdf) {
       const pdfBuffer = await convertToPdf(docxBuffer, `invoice-${safeName}.docx`);

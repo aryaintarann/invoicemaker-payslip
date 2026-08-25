@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 function toFormValues(invoice: Invoice): InvoiceFormValues {
   return {
     clientId: String(invoice.clientId),
-    invoiceNumber: invoice.invoiceNumber,
+    invoiceNumber: invoice.invoiceNumber ?? "",
     entity: invoice.entity,
     kind: invoice.kind,
     language: invoice.language,

@@ -62,7 +62,10 @@ export const invoices = pgTable("invoices", {
   clientId: integer("client_id")
     .references(() => clients.id)
     .notNull(),
-  invoiceNumber: varchar("invoice_number", { length: 100 }).notNull().unique(),
+  // Optional for entity "op" (individual) — those invoices aren't required to
+  // carry a formal number. Unique constraint still holds: Postgres allows any
+  // number of NULLs alongside it.
+  invoiceNumber: varchar("invoice_number", { length: 100 }).unique(),
   entity: invoiceEntityEnum("entity").notNull(),
   kind: invoiceKindEnum("kind").notNull(),
   language: invoiceLanguageEnum("language").default("id").notNull(),

@@ -183,7 +183,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   return (
     <div className="max-w-2xl">
       <PageHeader
-        title={data.invoiceNumber}
+        title={data.invoiceNumber || data.projectName}
         description={`${data.client?.name} · ${data.entity.toUpperCase()} · ${data.invoiceLabel} · ${data.projectName}`}
         action={<StatusBadge status={data.status} />}
       />
@@ -244,7 +244,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         </Button>
         <DeleteConfirmButton
           variant="full"
-          itemLabel={`invoice "${data.invoiceNumber}"`}
+          itemLabel={`invoice "${data.invoiceNumber || data.projectName}"`}
           pending={deleteMutation.isPending}
           onConfirm={() => deleteMutation.mutate()}
         />

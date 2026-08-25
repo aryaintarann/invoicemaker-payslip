@@ -11,7 +11,7 @@ export type InvoiceTemplateData = {
   entity: "cv" | "op";
   kind: "dp" | "termin1" | "termin2" | "final";
   language: "id" | "en";
-  invoiceNumber: string;
+  invoiceNumber?: string | null;
   invoiceLabel: string;
   projectName: string;
   issueDate: string;
@@ -67,7 +67,7 @@ export async function fillInvoiceTemplate(data: InvoiceTemplateData): Promise<Bu
   });
 
   const templateData = {
-    invoice_number: data.invoiceNumber,
+    invoice_number: data.invoiceNumber ?? "",
     invoice_label: data.invoiceLabel,
     project_name: data.projectName,
     issue_date: formatDate(data.issueDate, data.language),
