@@ -58,6 +58,7 @@ export default function InvoicesPage() {
             <tr className="text-left border-b border-black/10 dark:border-white/10">
               <th className="py-2 pr-4">No. Invoice</th>
               <th className="py-2 pr-4">Client</th>
+              <th className="py-2 pr-4">Proyek</th>
               <th className="py-2 pr-4">Jatuh Tempo</th>
               <th className="py-2 pr-4">Status</th>
               <th className="py-2 pr-4">Total</th>
@@ -72,6 +73,9 @@ export default function InvoicesPage() {
                   </Link>
                 </td>
                 <td className="py-2 pr-4">{inv.client?.name}</td>
+                <td className="py-2 pr-4">
+                  {inv.projectName} · {inv.entity.toUpperCase()} · {inv.invoiceLabel}
+                </td>
                 <td className="py-2 pr-4">{inv.dueDate}</td>
                 <td className="py-2 pr-4">{statusLabel[inv.status]}</td>
                 <td className="py-2 pr-4">{formatCurrency(inv.total)}</td>
@@ -79,7 +83,7 @@ export default function InvoicesPage() {
             ))}
             {data?.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-4 text-black/50">
+                <td colSpan={6} className="py-4 text-black/50">
                   Belum ada invoice.
                 </td>
               </tr>

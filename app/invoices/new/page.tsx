@@ -2,11 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { clientsApi, invoicesApi } from "@/lib/api-client";
 
-type ItemForm = { description: string; qty: string; unitPrice: string };
+const kindDefaultLabel: Record<string, string> = {
+  dp: "DP (Down Payment)",
+  final: "Final",
+};
 
 export default function NewInvoicePage() {
   const router = useRouter();
@@ -17,27 +20,49 @@ export default function NewInvoicePage() {
   const [form, setForm] = useState({
     clientId: "",
     invoiceNumber: "",
+    entity: "op" as "cv" | "op",
+    kind: "final" as "dp" | "final",
+    invoiceLabel: "Final",
+    clientAttn: "",
+    projectName: "",
     issueDate: "",
     dueDate: "",
     status: "draft" as "draft" | "sent",
+    contractValue: "",
+    invoicePercent: "100",
+    ppnPercent: "11",
+    pphPercent: "6",
+    pphDeadline: "",
   });
-  const [items, setItems] = useState<ItemForm[]>([{ description: "", qty: "1", unitPrice: "0" }]);
+
+  const preview = useMemo(() => {
+    const contractValue = Number(form.contractValue || 0);
+    const percent = Number(form.invoicePercent || 0);
+    const billed = (contractValue * percent) / 100;
+    const remaining = contractValue - billed;
+    if (form.entity === "op") {
+      return { billed, remaining, ppn: 0, pph: 0, total: billed };
+    }
+    const ppn = (billed * Number(form.ppnPercent || 0)) / 100;
+    const pph = (billed * Number(form.pphPercent || 0)) / 100;
+    return { billed, remaining, ppn, pph, total: billed + ppn - pph };
+  }, [form]);
 
   const mutation = useMutation({
     mutationFn: () =>
       invoicesApi.create({
         ...form,
-        items: items.map((i) => ({ ...i, qty: Number(i.qty), unitPrice: Number(i.unitPrice) })),
+        contractValue: Number(form.contractValue),
+        invoicePercent: Number(form.invoicePercent),
+        ppnPercent: form.entity === "cv" ? Number(form.ppnPercent) : undefined,
+        pphPercent: form.entity === "cv" ? Number(form.pphPercent) : undefined,
+        pphDeadline: form.entity === "cv" ? form.pphDeadline || undefined : undefined,
       }),
     onSuccess: (invoice) => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       router.push(`/invoices/${invoice.id}`);
     },
   });
-
-  function updateItem(index: number, field: keyof ItemForm, value: string) {
-    setItems((prev) => prev.map((it, i) => (i === index ? { ...it, [field]: value } : it)));
-  }
 
   return (
     <div className="max-w-2xl">
@@ -64,6 +89,63 @@ export default function NewInvoicePage() {
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          Nama Kontak (opsional, mis. &quot;Bapak Wiwin&quot;)
+          <input
+            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
+            value={form.clientAttn}
+            onChange={(e) => setForm({ ...form, clientAttn: e.target.value })}
+          />
+        </label>
+
+        <div className="grid grid-cols-2 gap-4">
+          <label className="flex flex-col gap-1 text-sm">
+            Entity
+            <select
+              className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
+              value={form.entity}
+              onChange={(e) => setForm({ ...form, entity: e.target.value as "cv" | "op" })}
+            >
+              <option value="op">OP (Individu, tanpa PPN/PPh)</option>
+              <option value="cv">CV (dengan PPN/PPh)</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Jenis
+            <select
+              className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
+              value={form.kind}
+              onChange={(e) => {
+                const kind = e.target.value as "dp" | "final";
+                setForm({ ...form, kind, invoiceLabel: kindDefaultLabel[kind] });
+              }}
+            >
+              <option value="dp">DP (Down Payment)</option>
+              <option value="final">Final</option>
+            </select>
+          </label>
+        </div>
+
+        <label className="flex flex-col gap-1 text-sm">
+          Label Invoice (teks yang tercetak, mis. &quot;1st DP&quot;, &quot;50% DP (Down Payment)&quot;, &quot;Final&quot;)
+          <input
+            required
+            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
+            value={form.invoiceLabel}
+            onChange={(e) => setForm({ ...form, invoiceLabel: e.target.value })}
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          Nama Proyek
+          <input
+            required
+            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
+            value={form.projectName}
+            onChange={(e) => setForm({ ...form, projectName: e.target.value })}
+          />
         </label>
 
         <div className="grid grid-cols-2 gap-4">
@@ -109,56 +191,93 @@ export default function NewInvoicePage() {
           </label>
         </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">Item</span>
-            <button
-              type="button"
-              onClick={() => setItems((prev) => [...prev, { description: "", qty: "1", unitPrice: "0" }])}
-              className="text-xs underline"
-            >
-              + Tambah item
-            </button>
+        <div className="grid grid-cols-2 gap-4">
+          <label className="flex flex-col gap-1 text-sm">
+            Nilai Kontrak (Rp)
+            <input
+              type="number"
+              required
+              min={0}
+              className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
+              value={form.contractValue}
+              onChange={(e) => setForm({ ...form, contractValue: e.target.value })}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Persen Tagihan Ini (%)
+            <input
+              type="number"
+              required
+              min={0.01}
+              max={100}
+              step="any"
+              className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
+              value={form.invoicePercent}
+              onChange={(e) => setForm({ ...form, invoicePercent: e.target.value })}
+            />
+          </label>
+        </div>
+
+        {form.entity === "cv" && (
+          <div className="grid grid-cols-3 gap-4">
+            <label className="flex flex-col gap-1 text-sm">
+              PPN (%)
+              <input
+                type="number"
+                min={0}
+                step="any"
+                className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
+                value={form.ppnPercent}
+                onChange={(e) => setForm({ ...form, ppnPercent: e.target.value })}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              PPh (%)
+              <input
+                type="number"
+                min={0}
+                step="any"
+                className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
+                value={form.pphPercent}
+                onChange={(e) => setForm({ ...form, pphPercent: e.target.value })}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              Batas Kirim Bukti Potong
+              <input
+                type="date"
+                className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
+                value={form.pphDeadline}
+                onChange={(e) => setForm({ ...form, pphDeadline: e.target.value })}
+              />
+            </label>
           </div>
-          <div className="flex flex-col gap-2">
-            {items.map((item, i) => (
-              <div key={i} className="grid grid-cols-[1fr_80px_120px_28px] gap-2">
-                <input
-                  placeholder="Deskripsi"
-                  required
-                  className="border border-black/20 dark:border-white/20 rounded px-2 py-1 text-sm bg-transparent"
-                  value={item.description}
-                  onChange={(e) => updateItem(i, "description", e.target.value)}
-                />
-                <input
-                  type="number"
-                  placeholder="Qty"
-                  min={0.01}
-                  step="any"
-                  required
-                  className="border border-black/20 dark:border-white/20 rounded px-2 py-1 text-sm bg-transparent"
-                  value={item.qty}
-                  onChange={(e) => updateItem(i, "qty", e.target.value)}
-                />
-                <input
-                  type="number"
-                  placeholder="Harga satuan"
-                  min={0}
-                  required
-                  className="border border-black/20 dark:border-white/20 rounded px-2 py-1 text-sm bg-transparent"
-                  value={item.unitPrice}
-                  onChange={(e) => updateItem(i, "unitPrice", e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setItems((prev) => prev.filter((_, idx) => idx !== i))}
-                  disabled={items.length === 1}
-                  className="text-red-600 text-sm disabled:opacity-30"
-                >
-                  ×
-                </button>
+        )}
+
+        <div className="rounded border border-black/10 dark:border-white/10 p-4 text-sm flex flex-col gap-1">
+          <div className="flex justify-between">
+            <span>Jumlah Tagihan</span>
+            <span>{preview.billed.toLocaleString("id-ID")}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Sisa</span>
+            <span>{preview.remaining.toLocaleString("id-ID")}</span>
+          </div>
+          {form.entity === "cv" && (
+            <>
+              <div className="flex justify-between">
+                <span>PPN</span>
+                <span>{preview.ppn.toLocaleString("id-ID")}</span>
               </div>
-            ))}
+              <div className="flex justify-between">
+                <span>PPh</span>
+                <span>-{preview.pph.toLocaleString("id-ID")}</span>
+              </div>
+            </>
+          )}
+          <div className="flex justify-between font-medium">
+            <span>Total Tagihan</span>
+            <span>{preview.total.toLocaleString("id-ID")}</span>
           </div>
         </div>
 

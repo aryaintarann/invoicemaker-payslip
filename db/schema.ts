@@ -2,7 +2,6 @@ import { relations } from "drizzle-orm";
 import {
   date,
   integer,
-  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -18,6 +17,10 @@ export const invoiceStatusEnum = pgEnum("invoice_status", [
   "paid",
   "overdue",
 ]);
+
+export const invoiceEntityEnum = pgEnum("invoice_entity", ["cv", "op"]);
+export const invoiceKindEnum = pgEnum("invoice_kind", ["dp", "final"]);
+export const invoiceLanguageEnum = pgEnum("invoice_language", ["id", "en"]);
 
 export const clients = pgTable("clients", {
   id: serial("id").primaryKey(),
@@ -36,28 +39,35 @@ export const employees = pgTable("employees", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Progress-billing invoice model matching the CV/OP DP/Final .docx templates:
+// a single invoice bills a percentage of a project's total contract value.
 export const invoices = pgTable("invoices", {
   id: serial("id").primaryKey(),
   clientId: integer("client_id")
     .references(() => clients.id)
     .notNull(),
   invoiceNumber: varchar("invoice_number", { length: 100 }).notNull().unique(),
+  entity: invoiceEntityEnum("entity").notNull(),
+  kind: invoiceKindEnum("kind").notNull(),
+  language: invoiceLanguageEnum("language").default("id").notNull(),
+  invoiceLabel: varchar("invoice_label", { length: 100 }).notNull(),
+  clientAttn: varchar("client_attn", { length: 255 }),
+  projectName: varchar("project_name", { length: 255 }).notNull(),
   issueDate: date("issue_date", { mode: "string" }).notNull(),
   dueDate: date("due_date", { mode: "string" }).notNull(),
   status: invoiceStatusEnum("status").default("draft").notNull(),
-  total: numeric("total", { precision: 14, scale: 2 }).default("0").notNull(),
+  contractValue: numeric("contract_value", { precision: 16, scale: 2 }).notNull(),
+  invoicePercent: numeric("invoice_percent", { precision: 5, scale: 2 }).notNull(),
+  billedAmount: numeric("billed_amount", { precision: 16, scale: 2 }).notNull(),
+  remainingAmount: numeric("remaining_amount", { precision: 16, scale: 2 }).notNull(),
+  // CV-only tax fields (null for OP, which has no PPN/PPh lines in its template).
+  ppnPercent: numeric("ppn_percent", { precision: 5, scale: 2 }),
+  pphPercent: numeric("pph_percent", { precision: 5, scale: 2 }),
+  ppnAmount: numeric("ppn_amount", { precision: 16, scale: 2 }),
+  pphAmount: numeric("pph_amount", { precision: 16, scale: 2 }),
+  pphDeadline: date("pph_deadline", { mode: "string" }),
+  total: numeric("total", { precision: 16, scale: 2 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const invoiceItems = pgTable("invoice_items", {
-  id: serial("id").primaryKey(),
-  invoiceId: integer("invoice_id")
-    .references(() => invoices.id, { onDelete: "cascade" })
-    .notNull(),
-  description: text("description").notNull(),
-  qty: numeric("qty", { precision: 10, scale: 2 }).notNull(),
-  unitPrice: numeric("unit_price", { precision: 14, scale: 2 }).notNull(),
-  subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull(),
 });
 
 // Reserved for a future phase (auto/manual follow-up emails) — not populated yet.
@@ -70,15 +80,24 @@ export const invoiceFollowups = pgTable("invoice_followups", {
   method: varchar("method", { length: 20 }).notNull(),
 });
 
+// Matches templates/slip-gaji/template.xlsx's fixed salary structure:
+// pendapatan = gajiPokok + (uangTransportMakanPerHari * jumlahHariKerja) + biayaBpjs
+// total (gaji bersih) = pendapatan - biayaBpjsJht
 export const payslips = pgTable("payslips", {
   id: serial("id").primaryKey(),
   employeeId: integer("employee_id")
     .references(() => employees.id)
     .notNull(),
   period: varchar("period", { length: 7 }).notNull(),
-  baseSalary: numeric("base_salary", { precision: 14, scale: 2 }).notNull(),
-  allowances: jsonb("allowances").$type<Record<string, number>>().default({}),
-  deductions: jsonb("deductions").$type<Record<string, number>>().default({}),
+  issueDate: date("issue_date", { mode: "string" }).notNull(),
+  jumlahHariKerja: integer("jumlah_hari_kerja").notNull(),
+  gajiPokok: numeric("gaji_pokok", { precision: 14, scale: 2 }).notNull(),
+  uangTransportMakanPerHari: numeric("uang_transport_makan_per_hari", {
+    precision: 14,
+    scale: 2,
+  }).notNull(),
+  biayaBpjs: numeric("biaya_bpjs", { precision: 14, scale: 2 }).default("0").notNull(),
+  biayaBpjsJht: numeric("biaya_bpjs_jht", { precision: 14, scale: 2 }).default("0").notNull(),
   total: numeric("total", { precision: 14, scale: 2 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -92,15 +111,7 @@ export const invoicesRelations = relations(invoices, ({ one, many }) => ({
     fields: [invoices.clientId],
     references: [clients.id],
   }),
-  items: many(invoiceItems),
   followups: many(invoiceFollowups),
-}));
-
-export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
-  invoice: one(invoices, {
-    fields: [invoiceItems.invoiceId],
-    references: [invoices.id],
-  }),
 }));
 
 export const invoiceFollowupsRelations = relations(invoiceFollowups, ({ one }) => ({

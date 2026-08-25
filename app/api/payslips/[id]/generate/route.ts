@@ -16,11 +16,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const buffer = await fillPayslipTemplate({
       employeeName: payslip.employee.name,
-      position: payslip.employee.position,
-      period: payslip.period,
-      baseSalary: payslip.baseSalary,
-      allowances: (payslip.allowances as Record<string, number>) ?? {},
-      deductions: (payslip.deductions as Record<string, number>) ?? {},
+      issueDate: payslip.issueDate,
+      jumlahHariKerja: payslip.jumlahHariKerja,
+      gajiPokok: payslip.gajiPokok,
+      uangTransportMakanPerHari: payslip.uangTransportMakanPerHari,
+      biayaBpjs: payslip.biayaBpjs,
+      biayaBpjsJht: payslip.biayaBpjsJht,
       total: payslip.total,
     });
 

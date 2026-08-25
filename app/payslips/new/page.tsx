@@ -2,11 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { employeesApi, payslipsApi } from "@/lib/api-client";
-
-type ComponentForm = { key: string; amount: string };
 
 export default function NewPayslipPage() {
   const router = useRouter();
@@ -14,82 +12,44 @@ export default function NewPayslipPage() {
 
   const { data: employees } = useQuery({ queryKey: ["employees"], queryFn: employeesApi.list });
 
-  const [employeeId, setEmployeeId] = useState("");
-  const [period, setPeriod] = useState("");
-  const [baseSalary, setBaseSalary] = useState("");
-  const [allowances, setAllowances] = useState<ComponentForm[]>([]);
-  const [deductions, setDeductions] = useState<ComponentForm[]>([]);
+  const [form, setForm] = useState({
+    employeeId: "",
+    period: "",
+    issueDate: "",
+    jumlahHariKerja: "",
+    gajiPokok: "",
+    uangTransportMakanPerHari: "",
+    biayaBpjs: "0",
+    biayaBpjsJht: "0",
+  });
 
-  function toRecord(list: ComponentForm[]) {
-    return Object.fromEntries(list.filter((c) => c.key).map((c) => [c.key, Number(c.amount || 0)]));
-  }
+  const preview = useMemo(() => {
+    const gajiPokok = Number(form.gajiPokok || 0);
+    const hariKerja = Number(form.jumlahHariKerja || 0);
+    const transportPerHari = Number(form.uangTransportMakanPerHari || 0);
+    const biayaBpjs = Number(form.biayaBpjs || 0);
+    const biayaBpjsJht = Number(form.biayaBpjsJht || 0);
+    const transportTotal = transportPerHari * hariKerja;
+    const totalPendapatan = gajiPokok + transportTotal + biayaBpjs;
+    const total = totalPendapatan - biayaBpjsJht;
+    return { transportTotal, totalPendapatan, total };
+  }, [form]);
 
   const mutation = useMutation({
     mutationFn: () =>
       payslipsApi.create({
-        employeeId,
-        period,
-        baseSalary,
-        allowances: toRecord(allowances),
-        deductions: toRecord(deductions),
+        ...form,
+        jumlahHariKerja: Number(form.jumlahHariKerja),
+        gajiPokok: Number(form.gajiPokok),
+        uangTransportMakanPerHari: Number(form.uangTransportMakanPerHari),
+        biayaBpjs: Number(form.biayaBpjs),
+        biayaBpjsJht: Number(form.biayaBpjsJht),
       }),
     onSuccess: (payslip) => {
       queryClient.invalidateQueries({ queryKey: ["payslips"] });
       router.push(`/payslips/${payslip.id}`);
     },
   });
-
-  function componentEditor(
-    label: string,
-    list: ComponentForm[],
-    setList: (v: ComponentForm[]) => void
-  ) {
-    return (
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium">{label}</span>
-          <button
-            type="button"
-            onClick={() => setList([...list, { key: "", amount: "0" }])}
-            className="text-xs underline"
-          >
-            + Tambah
-          </button>
-        </div>
-        <div className="flex flex-col gap-2">
-          {list.map((c, i) => (
-            <div key={i} className="grid grid-cols-[1fr_140px_28px] gap-2">
-              <input
-                placeholder="nama (mis. transport)"
-                className="border border-black/20 dark:border-white/20 rounded px-2 py-1 text-sm bg-transparent"
-                value={c.key}
-                onChange={(e) =>
-                  setList(list.map((it, idx) => (idx === i ? { ...it, key: e.target.value } : it)))
-                }
-              />
-              <input
-                type="number"
-                placeholder="jumlah"
-                min={0}
-                className="border border-black/20 dark:border-white/20 rounded px-2 py-1 text-sm bg-transparent"
-                value={c.amount}
-                onChange={(e) =>
-                  setList(list.map((it, idx) => (idx === i ? { ...it, amount: e.target.value } : it)))
-                }
-              />
-              <button
-                type="button"
-                onClick={() => setList(list.filter((_, idx) => idx !== i))}
-                className="text-red-600 text-sm"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-xl">
@@ -106,11 +66,15 @@ export default function NewPayslipPage() {
           <select
             required
             className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={employeeId}
+            value={form.employeeId}
             onChange={(e) => {
-              setEmployeeId(e.target.value);
-              const emp = employees?.find((x) => String(x.id) === e.target.value);
-              if (emp) setBaseSalary(emp.baseSalary);
+              const employeeId = e.target.value;
+              const emp = employees?.find((x) => String(x.id) === employeeId);
+              setForm({
+                ...form,
+                employeeId,
+                gajiPokok: emp ? emp.baseSalary : form.gajiPokok,
+              });
             }}
           >
             <option value="">Pilih karyawan</option>
@@ -130,8 +94,29 @@ export default function NewPayslipPage() {
               placeholder="2026-08"
               pattern="\d{4}-\d{2}"
               className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
+              value={form.period}
+              onChange={(e) => setForm({ ...form, period: e.target.value })}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Tanggal Slip
+            <input
+              type="date"
+              required
+              className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
+              value={form.issueDate}
+              onChange={(e) => setForm({ ...form, issueDate: e.target.value })}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Jumlah Hari Kerja
+            <input
+              type="number"
+              required
+              min={0}
+              className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
+              value={form.jumlahHariKerja}
+              onChange={(e) => setForm({ ...form, jumlahHariKerja: e.target.value })}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
@@ -141,14 +126,57 @@ export default function NewPayslipPage() {
               required
               min={0}
               className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-              value={baseSalary}
-              onChange={(e) => setBaseSalary(e.target.value)}
+              value={form.gajiPokok}
+              onChange={(e) => setForm({ ...form, gajiPokok: e.target.value })}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Uang Transport + Makan (per hari)
+            <input
+              type="number"
+              required
+              min={0}
+              className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
+              value={form.uangTransportMakanPerHari}
+              onChange={(e) => setForm({ ...form, uangTransportMakanPerHari: e.target.value })}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Tambahan BPJS Tenagakerja
+            <input
+              type="number"
+              min={0}
+              className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
+              value={form.biayaBpjs}
+              onChange={(e) => setForm({ ...form, biayaBpjs: e.target.value })}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Potongan BPJS JHT
+            <input
+              type="number"
+              min={0}
+              className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
+              value={form.biayaBpjsJht}
+              onChange={(e) => setForm({ ...form, biayaBpjsJht: e.target.value })}
             />
           </label>
         </div>
 
-        {componentEditor("Tunjangan", allowances, setAllowances)}
-        {componentEditor("Potongan", deductions, setDeductions)}
+        <div className="rounded border border-black/10 dark:border-white/10 p-4 text-sm flex flex-col gap-1">
+          <div className="flex justify-between">
+            <span>Transport + Makan ({form.jumlahHariKerja || 0} hari)</span>
+            <span>{preview.transportTotal.toLocaleString("id-ID")}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Total Pendapatan</span>
+            <span>{preview.totalPendapatan.toLocaleString("id-ID")}</span>
+          </div>
+          <div className="flex justify-between font-medium">
+            <span>Total Gaji</span>
+            <span>{preview.total.toLocaleString("id-ID")}</span>
+          </div>
+        </div>
 
         {mutation.isError && (
           <p className="text-sm text-red-600">{(mutation.error as Error).message}</p>

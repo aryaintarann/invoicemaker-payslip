@@ -2,14 +2,37 @@ import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 import { db } from "@/db";
-import { invoiceItems, invoices } from "@/db/schema";
+import { invoices } from "@/db/schema";
 import { invoiceUpdateInput } from "@/lib/validators";
+
+function computeAmounts(input: {
+  contractValue: number;
+  invoicePercent: number;
+  entity: "cv" | "op";
+  ppnPercent?: number;
+  pphPercent?: number;
+}) {
+  const billedAmount = (input.contractValue * input.invoicePercent) / 100;
+  const remainingAmount = input.contractValue - billedAmount;
+
+  if (input.entity !== "cv") {
+    return { billedAmount, remainingAmount, ppnAmount: null, pphAmount: null, total: billedAmount };
+  }
+
+  const ppnPercent = input.ppnPercent ?? 11;
+  const pphPercent = input.pphPercent ?? 6;
+  const ppnAmount = (billedAmount * ppnPercent) / 100;
+  const pphAmount = (billedAmount * pphPercent) / 100;
+  const total = billedAmount + ppnAmount - pphAmount;
+
+  return { billedAmount, remainingAmount, ppnAmount, pphAmount, total };
+}
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const row = await db.query.invoices.findFirst({
     where: eq(invoices.id, Number(id)),
-    with: { client: true, items: true },
+    with: { client: true },
   });
   if (!row) return NextResponse.json({ error: "Invoice tidak ditemukan" }, { status: 404 });
   return NextResponse.json(row);
@@ -27,7 +50,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const existing = await db.query.invoices.findFirst({ where: eq(invoices.id, invoiceId) });
   if (!existing) return NextResponse.json({ error: "Invoice tidak ditemukan" }, { status: 404 });
 
-  const { items, status, ...rest } = parsed.data;
+  const { status, ppnPercent, pphPercent, contractValue, invoicePercent, ...rest } = parsed.data;
 
   // Mark-paid transition, allowed from sent/overdue regardless of other edits.
   if (status === "paid") {
@@ -45,7 +68,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json(row);
   }
 
-  // Any other edit (fields/items/status change) is only allowed while draft.
+  // Any other edit (fields/status change) is only allowed while draft.
   if (existing.status !== "draft") {
     return NextResponse.json(
       { error: "Invoice hanya bisa diedit selagi berstatus draft" },
@@ -53,34 +76,48 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     );
   }
 
-  let total: string | undefined;
-  if (items) {
-    total = String(items.reduce((sum, item) => sum + item.qty * item.unitPrice, 0));
-    await db.delete(invoiceItems).where(eq(invoiceItems.invoiceId, invoiceId));
-    await db.insert(invoiceItems).values(
-      items.map((item) => ({
-        invoiceId,
-        description: item.description,
-        qty: String(item.qty),
-        unitPrice: String(item.unitPrice),
-        subtotal: String(item.qty * item.unitPrice),
-      }))
-    );
+  const needsRecompute =
+    contractValue !== undefined ||
+    invoicePercent !== undefined ||
+    rest.entity !== undefined ||
+    ppnPercent !== undefined ||
+    pphPercent !== undefined;
+
+  let computed: Record<string, string | null> = {};
+  if (needsRecompute) {
+    const entity = rest.entity ?? existing.entity;
+    const amounts = computeAmounts({
+      contractValue: contractValue ?? Number(existing.contractValue),
+      invoicePercent: invoicePercent ?? Number(existing.invoicePercent),
+      entity,
+      ppnPercent: ppnPercent ?? (existing.ppnPercent ? Number(existing.ppnPercent) : undefined),
+      pphPercent: pphPercent ?? (existing.pphPercent ? Number(existing.pphPercent) : undefined),
+    });
+    computed = {
+      contractValue: String(contractValue ?? existing.contractValue),
+      invoicePercent: String(invoicePercent ?? existing.invoicePercent),
+      billedAmount: String(amounts.billedAmount),
+      remainingAmount: String(amounts.remainingAmount),
+      ppnPercent: entity === "cv" ? String(ppnPercent ?? existing.ppnPercent ?? 11) : null,
+      pphPercent: entity === "cv" ? String(pphPercent ?? existing.pphPercent ?? 6) : null,
+      ppnAmount: amounts.ppnAmount != null ? String(amounts.ppnAmount) : null,
+      pphAmount: amounts.pphAmount != null ? String(amounts.pphAmount) : null,
+      total: String(amounts.total),
+    };
   }
 
   const [row] = await db
     .update(invoices)
     .set({
       ...rest,
-      ...(status ? { status } : {}),
-      ...(total !== undefined ? { total } : {}),
+      ...computed,
     })
     .where(eq(invoices.id, invoiceId))
     .returning();
 
   const full = await db.query.invoices.findFirst({
     where: eq(invoices.id, row.id),
-    with: { client: true, items: true },
+    with: { client: true },
   });
   return NextResponse.json(full);
 }

@@ -9,19 +9,31 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const invoice = await db.query.invoices.findFirst({
     where: eq(invoices.id, Number(id)),
-    with: { client: true, items: true },
+    with: { client: true },
   });
   if (!invoice) return NextResponse.json({ error: "Invoice tidak ditemukan" }, { status: 404 });
 
   try {
     const buffer = await fillInvoiceTemplate({
+      entity: invoice.entity,
+      kind: invoice.kind,
+      language: invoice.language,
       invoiceNumber: invoice.invoiceNumber,
+      invoiceLabel: invoice.invoiceLabel,
+      projectName: invoice.projectName,
       issueDate: invoice.issueDate,
-      dueDate: invoice.dueDate,
-      status: invoice.status,
-      total: invoice.total,
       client: invoice.client,
-      items: invoice.items,
+      clientAttn: invoice.clientAttn,
+      contractValue: invoice.contractValue,
+      invoicePercent: invoice.invoicePercent,
+      billedAmount: invoice.billedAmount,
+      remainingAmount: invoice.remainingAmount,
+      ppnPercent: invoice.ppnPercent,
+      pphPercent: invoice.pphPercent,
+      ppnAmount: invoice.ppnAmount,
+      pphAmount: invoice.pphAmount,
+      pphDeadline: invoice.pphDeadline,
+      total: invoice.total,
     });
 
     return new NextResponse(new Blob([new Uint8Array(buffer)]), {

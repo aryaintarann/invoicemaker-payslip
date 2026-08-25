@@ -5,10 +5,16 @@ import { db } from "@/db";
 import { payslips } from "@/db/schema";
 import { payslipUpdateInput } from "@/lib/validators";
 
-function computeTotal(baseSalary: number, allowances: Record<string, number>, deductions: Record<string, number>) {
-  const allowanceSum = Object.values(allowances).reduce((s, v) => s + v, 0);
-  const deductionSum = Object.values(deductions).reduce((s, v) => s + v, 0);
-  return baseSalary + allowanceSum - deductionSum;
+function computeTotal(input: {
+  gajiPokok: number;
+  uangTransportMakanPerHari: number;
+  jumlahHariKerja: number;
+  biayaBpjs: number;
+  biayaBpjsJht: number;
+}) {
+  const totalPendapatan =
+    input.gajiPokok + input.uangTransportMakanPerHari * input.jumlahHariKerja + input.biayaBpjs;
+  return totalPendapatan - input.biayaBpjsJht;
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -33,19 +39,27 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const existing = await db.query.payslips.findFirst({ where: eq(payslips.id, payslipId) });
   if (!existing) return NextResponse.json({ error: "Slip gaji tidak ditemukan" }, { status: 404 });
 
-  const { baseSalary, allowances, deductions, ...rest } = parsed.data;
-  const nextBaseSalary = baseSalary ?? Number(existing.baseSalary);
-  const nextAllowances = allowances ?? (existing.allowances as Record<string, number>);
-  const nextDeductions = deductions ?? (existing.deductions as Record<string, number>);
-  const total = computeTotal(nextBaseSalary, nextAllowances, nextDeductions);
+  const merged = {
+    gajiPokok: parsed.data.gajiPokok ?? Number(existing.gajiPokok),
+    uangTransportMakanPerHari:
+      parsed.data.uangTransportMakanPerHari ?? Number(existing.uangTransportMakanPerHari),
+    jumlahHariKerja: parsed.data.jumlahHariKerja ?? existing.jumlahHariKerja,
+    biayaBpjs: parsed.data.biayaBpjs ?? Number(existing.biayaBpjs),
+    biayaBpjsJht: parsed.data.biayaBpjsJht ?? Number(existing.biayaBpjsJht),
+  };
+  const total = computeTotal(merged);
 
   const [row] = await db
     .update(payslips)
     .set({
-      ...rest,
-      ...(baseSalary !== undefined ? { baseSalary: String(baseSalary) } : {}),
-      ...(allowances !== undefined ? { allowances } : {}),
-      ...(deductions !== undefined ? { deductions } : {}),
+      ...(parsed.data.employeeId !== undefined ? { employeeId: parsed.data.employeeId } : {}),
+      ...(parsed.data.period !== undefined ? { period: parsed.data.period } : {}),
+      ...(parsed.data.issueDate !== undefined ? { issueDate: parsed.data.issueDate } : {}),
+      jumlahHariKerja: merged.jumlahHariKerja,
+      gajiPokok: String(merged.gajiPokok),
+      uangTransportMakanPerHari: String(merged.uangTransportMakanPerHari),
+      biayaBpjs: String(merged.biayaBpjs),
+      biayaBpjsJht: String(merged.biayaBpjsJht),
       total: String(total),
     })
     .where(eq(payslips.id, payslipId))

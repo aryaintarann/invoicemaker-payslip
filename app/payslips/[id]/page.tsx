@@ -28,33 +28,42 @@ export default function PayslipDetailPage({ params }: { params: Promise<{ id: st
 
   if (!data) return <p className="text-sm text-black/60">Memuat...</p>;
 
+  const transportTotal = Number(data.uangTransportMakanPerHari) * data.jumlahHariKerja;
+  const totalPendapatan = Number(data.gajiPokok) + transportTotal + Number(data.biayaBpjs);
+
   return (
     <div className="max-w-xl">
       <h1 className="text-2xl font-semibold mb-1">{data.employee?.name}</h1>
       <p className="text-sm text-black/60 mb-6">
-        {data.employee?.position} · Periode {data.period}
+        {data.employee?.position} · Periode {data.period} · {data.jumlahHariKerja} hari kerja
       </p>
 
       <table className="w-full text-sm border-collapse mb-4">
         <tbody>
           <tr className="border-b border-black/5 dark:border-white/5">
             <td className="py-2">Gaji Pokok</td>
-            <td className="py-2 text-right">{formatCurrency(data.baseSalary)}</td>
+            <td className="py-2 text-right">{formatCurrency(data.gajiPokok)}</td>
           </tr>
-          {Object.entries(data.allowances || {}).map(([key, amount]) => (
-            <tr key={key} className="border-b border-black/5 dark:border-white/5">
-              <td className="py-2">Tunjangan · {key}</td>
-              <td className="py-2 text-right">+{formatCurrency(amount)}</td>
-            </tr>
-          ))}
-          {Object.entries(data.deductions || {}).map(([key, amount]) => (
-            <tr key={key} className="border-b border-black/5 dark:border-white/5">
-              <td className="py-2">Potongan · {key}</td>
-              <td className="py-2 text-right">-{formatCurrency(amount)}</td>
-            </tr>
-          ))}
+          <tr className="border-b border-black/5 dark:border-white/5">
+            <td className="py-2">
+              Transport + Makan ({formatCurrency(data.uangTransportMakanPerHari)} × {data.jumlahHariKerja})
+            </td>
+            <td className="py-2 text-right">+{formatCurrency(transportTotal)}</td>
+          </tr>
+          <tr className="border-b border-black/5 dark:border-white/5">
+            <td className="py-2">Tambahan BPJS Tenagakerja</td>
+            <td className="py-2 text-right">+{formatCurrency(data.biayaBpjs)}</td>
+          </tr>
+          <tr className="border-b border-black/5 dark:border-white/5">
+            <td className="py-2 font-medium">Total Pendapatan</td>
+            <td className="py-2 text-right font-medium">{formatCurrency(totalPendapatan)}</td>
+          </tr>
+          <tr className="border-b border-black/5 dark:border-white/5">
+            <td className="py-2">Potongan BPJS JHT</td>
+            <td className="py-2 text-right">-{formatCurrency(data.biayaBpjsJht)}</td>
+          </tr>
           <tr>
-            <td className="py-2 font-medium">Total</td>
+            <td className="py-2 font-medium">Total Gaji</td>
             <td className="py-2 text-right font-medium">{formatCurrency(data.total)}</td>
           </tr>
         </tbody>

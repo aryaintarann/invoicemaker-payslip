@@ -4,10 +4,16 @@ import { db } from "@/db";
 import { payslips } from "@/db/schema";
 import { payslipInput } from "@/lib/validators";
 
-function computeTotal(baseSalary: number, allowances: Record<string, number>, deductions: Record<string, number>) {
-  const allowanceSum = Object.values(allowances).reduce((s, v) => s + v, 0);
-  const deductionSum = Object.values(deductions).reduce((s, v) => s + v, 0);
-  return baseSalary + allowanceSum - deductionSum;
+function computeTotal(input: {
+  gajiPokok: number;
+  uangTransportMakanPerHari: number;
+  jumlahHariKerja: number;
+  biayaBpjs: number;
+  biayaBpjsJht: number;
+}) {
+  const totalPendapatan =
+    input.gajiPokok + input.uangTransportMakanPerHari * input.jumlahHariKerja + input.biayaBpjs;
+  return totalPendapatan - input.biayaBpjsJht;
 }
 
 export async function GET(req: NextRequest) {
@@ -34,16 +40,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { baseSalary, allowances, deductions, ...rest } = parsed.data;
-  const total = computeTotal(baseSalary, allowances, deductions);
+  const total = computeTotal(parsed.data);
 
   const [row] = await db
     .insert(payslips)
     .values({
-      ...rest,
-      baseSalary: String(baseSalary),
-      allowances,
-      deductions,
+      employeeId: parsed.data.employeeId,
+      period: parsed.data.period,
+      issueDate: parsed.data.issueDate,
+      jumlahHariKerja: parsed.data.jumlahHariKerja,
+      gajiPokok: String(parsed.data.gajiPokok),
+      uangTransportMakanPerHari: String(parsed.data.uangTransportMakanPerHari),
+      biayaBpjs: String(parsed.data.biayaBpjs),
+      biayaBpjsJht: String(parsed.data.biayaBpjsJht),
       total: String(total),
     })
     .returning();

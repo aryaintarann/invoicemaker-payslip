@@ -54,32 +54,45 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           {statusLabel[data.status]}
         </span>
       </div>
+      <p className="text-sm text-black/60 mb-1">
+        {data.client?.name} · {data.entity.toUpperCase()} · {data.invoiceLabel} · {data.projectName}
+      </p>
       <p className="text-sm text-black/60 mb-6">
-        {data.client?.name} · Terbit {data.issueDate} · Jatuh tempo {data.dueDate}
+        Terbit {data.issueDate} · Jatuh tempo {data.dueDate}
       </p>
 
       <table className="w-full text-sm border-collapse mb-4">
-        <thead>
-          <tr className="text-left border-b border-black/10 dark:border-white/10">
-            <th className="py-2 pr-4">Deskripsi</th>
-            <th className="py-2 pr-4">Qty</th>
-            <th className="py-2 pr-4">Harga Satuan</th>
-            <th className="py-2 pr-4">Subtotal</th>
-          </tr>
-        </thead>
         <tbody>
-          {data.items?.map((item) => (
-            <tr key={item.id} className="border-b border-black/5 dark:border-white/5">
-              <td className="py-2 pr-4">{item.description}</td>
-              <td className="py-2 pr-4">{item.qty}</td>
-              <td className="py-2 pr-4">{formatCurrency(item.unitPrice)}</td>
-              <td className="py-2 pr-4">{formatCurrency(item.subtotal)}</td>
-            </tr>
-          ))}
+          <tr className="border-b border-black/5 dark:border-white/5">
+            <td className="py-2">Nilai Kontrak</td>
+            <td className="py-2 text-right">{formatCurrency(data.contractValue)}</td>
+          </tr>
+          <tr className="border-b border-black/5 dark:border-white/5">
+            <td className="py-2">Persen Tagihan ({data.invoicePercent}%)</td>
+            <td className="py-2 text-right">{formatCurrency(data.billedAmount)}</td>
+          </tr>
+          <tr className="border-b border-black/5 dark:border-white/5">
+            <td className="py-2">Sisa</td>
+            <td className="py-2 text-right">{formatCurrency(data.remainingAmount)}</td>
+          </tr>
+          {data.entity === "cv" && (
+            <>
+              <tr className="border-b border-black/5 dark:border-white/5">
+                <td className="py-2">PPN ({data.ppnPercent}%)</td>
+                <td className="py-2 text-right">+{formatCurrency(data.ppnAmount ?? "0")}</td>
+              </tr>
+              <tr className="border-b border-black/5 dark:border-white/5">
+                <td className="py-2">PPh ({data.pphPercent}%)</td>
+                <td className="py-2 text-right">-{formatCurrency(data.pphAmount ?? "0")}</td>
+              </tr>
+            </>
+          )}
+          <tr>
+            <td className="py-2 font-medium">Total Tagihan</td>
+            <td className="py-2 text-right font-medium">{formatCurrency(data.total)}</td>
+          </tr>
         </tbody>
       </table>
-
-      <p className="text-right font-medium mb-6">Total: {formatCurrency(data.total)}</p>
 
       <div className="flex gap-3 flex-wrap">
         <a

@@ -27,34 +27,43 @@ export type Employee = {
   createdAt: string;
 };
 
-export type InvoiceItem = {
-  id: number;
-  description: string;
-  qty: string;
-  unitPrice: string;
-  subtotal: string;
-};
-
 export type Invoice = {
   id: number;
   clientId: number;
   invoiceNumber: string;
+  entity: "cv" | "op";
+  kind: "dp" | "final";
+  language: "id" | "en";
+  invoiceLabel: string;
+  clientAttn: string | null;
+  projectName: string;
   issueDate: string;
   dueDate: string;
   status: "draft" | "sent" | "paid" | "overdue";
+  contractValue: string;
+  invoicePercent: string;
+  billedAmount: string;
+  remainingAmount: string;
+  ppnPercent: string | null;
+  pphPercent: string | null;
+  ppnAmount: string | null;
+  pphAmount: string | null;
+  pphDeadline: string | null;
   total: string;
   createdAt: string;
   client?: Client;
-  items?: InvoiceItem[];
 };
 
 export type Payslip = {
   id: number;
   employeeId: number;
   period: string;
-  baseSalary: string;
-  allowances: Record<string, number>;
-  deductions: Record<string, number>;
+  issueDate: string;
+  jumlahHariKerja: number;
+  gajiPokok: string;
+  uangTransportMakanPerHari: string;
+  biayaBpjs: string;
+  biayaBpjsJht: string;
   total: string;
   createdAt: string;
   employee?: Employee;

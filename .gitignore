@@ -44,7 +44,10 @@ next-env.d.ts
 # playwright mcp test artifacts
 /.playwright-mcp/
 
-# user-supplied templates (documented conventions only; real files stay local)
-templates/invoice/template.docx
-templates/slip-gaji/template.xlsx
-templates/slip-gaji/cell-map.json
+# user-supplied templates contain real business data (bank accounts, client
+# names, contact info) - keep local only, never on GitHub. Docs (READMEs)
+# stay tracked.
+templates/invoice/**/*.docx
+templates/invoice/**/*.doc
+templates/slip-gaji/**/*.xlsx
+templates/slip-gaji/**/*.json

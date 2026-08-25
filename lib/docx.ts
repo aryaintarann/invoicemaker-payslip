@@ -4,46 +4,54 @@ import path from "node:path";
 import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
 
-import { formatCurrency, formatDate } from "./format";
-
-const TEMPLATE_PATH = path.join(process.cwd(), "templates/invoice/template.docx");
+import { formatDate } from "./format";
+import { terbilang } from "./terbilang";
 
 export type InvoiceTemplateData = {
+  entity: "cv" | "op";
+  kind: "dp" | "final";
+  language: "id" | "en";
   invoiceNumber: string;
+  invoiceLabel: string;
+  projectName: string;
   issueDate: string;
-  dueDate: string;
-  status: string;
-  total: string | number;
   client: {
     name: string;
-    email?: string | null;
-    phone?: string | null;
-    address?: string | null;
   };
-  items: Array<{
-    description: string;
-    qty: string | number;
-    unitPrice: string | number;
-    subtotal: string | number;
-  }>;
+  clientAttn?: string | null;
+  contractValue: string | number;
+  invoicePercent: string | number;
+  billedAmount: string | number;
+  remainingAmount: string | number;
+  ppnPercent?: string | number | null;
+  pphPercent?: string | number | null;
+  ppnAmount?: string | number | null;
+  pphAmount?: string | number | null;
+  pphDeadline?: string | null;
+  total: string | number;
 };
 
 export class TemplateMissingError extends Error {}
 export class TemplateRenderError extends Error {}
 
+function templatePath(entity: string, language: string, kind: string) {
+  return path.join(process.cwd(), "templates/invoice", entity, language, `${kind}.docx`);
+}
+
 /**
- * Fills templates/invoice/template.docx (user-supplied, see templates/invoice/README.md
- * for the required placeholder tags) and returns the rendered .docx as a Buffer.
+ * Fills templates/invoice/{entity}/{language}/{kind}.docx (user-supplied) and
+ * returns the rendered .docx as a Buffer. See templates/invoice/README.md.
  */
 export async function fillInvoiceTemplate(data: InvoiceTemplateData): Promise<Buffer> {
-  if (!fs.existsSync(TEMPLATE_PATH)) {
+  const templateFile = templatePath(data.entity, data.language, data.kind);
+  if (!fs.existsSync(templateFile)) {
     throw new TemplateMissingError(
-      "Template invoice belum ditemukan di templates/invoice/template.docx. " +
-        "Lihat templates/invoice/README.md untuk format placeholder yang dibutuhkan."
+      `Template invoice belum ditemukan di templates/invoice/${data.entity}/${data.language}/${data.kind}.docx. ` +
+        "Lihat templates/invoice/README.md."
     );
   }
 
-  const content = fs.readFileSync(TEMPLATE_PATH, "binary");
+  const content = fs.readFileSync(templateFile, "binary");
   const zip = new PizZip(content);
   const doc = new Docxtemplater(zip, {
     paragraphLoop: true,
@@ -52,20 +60,22 @@ export async function fillInvoiceTemplate(data: InvoiceTemplateData): Promise<Bu
 
   const templateData = {
     invoice_number: data.invoiceNumber,
+    invoice_label: data.invoiceLabel,
+    project_name: data.projectName,
     issue_date: formatDate(data.issueDate),
-    due_date: formatDate(data.dueDate),
-    status: data.status,
-    total: formatCurrency(data.total),
     client_name: data.client.name,
-    client_email: data.client.email ?? "",
-    client_phone: data.client.phone ?? "",
-    client_address: data.client.address ?? "",
-    items: data.items.map((item) => ({
-      description: item.description,
-      qty: item.qty,
-      unit_price: formatCurrency(item.unitPrice),
-      subtotal: formatCurrency(item.subtotal),
-    })),
+    client_attn: data.clientAttn ?? "",
+    invoice_percent: formatPercent(data.invoicePercent),
+    contract_value: formatAmount(data.contractValue),
+    billed_amount: formatAmount(data.billedAmount),
+    remaining_amount: formatAmount(data.remainingAmount),
+    ppn_percent: data.ppnPercent != null ? formatPercent(data.ppnPercent) : "",
+    pph_percent: data.pphPercent != null ? formatPercent(data.pphPercent) : "",
+    ppn_amount: data.ppnAmount != null ? formatAmount(data.ppnAmount) : "",
+    pph_amount: data.pphAmount != null ? formatAmount(data.pphAmount) : "",
+    pph_deadline: data.pphDeadline ? formatDate(data.pphDeadline) : "",
+    total_billed: formatAmount(data.total),
+    terbilang: terbilang(data.total),
   };
 
   try {
@@ -73,11 +83,23 @@ export async function fillInvoiceTemplate(data: InvoiceTemplateData): Promise<Bu
   } catch (error) {
     const message = extractDocxtemplaterError(error);
     throw new TemplateRenderError(
-      `Gagal mengisi template invoice: ${message}. Pastikan tag placeholder di template.docx sesuai templates/invoice/README.md.`
+      `Gagal mengisi template invoice: ${message}. Pastikan tag placeholder di template sesuai templates/invoice/README.md.`
     );
   }
 
   return doc.toBuffer();
+}
+
+// Templates format amounts as "Rp.<amount>,-" so the tag itself is just the
+// number, formatted with thousands separators (no leading "Rp" / trailing "-").
+function formatAmount(value: string | number): string {
+  const n = typeof value === "string" ? Number(value) : value;
+  return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(n);
+}
+
+function formatPercent(value: string | number): string {
+  const n = typeof value === "string" ? Number(value) : value;
+  return Number.isInteger(n) ? String(n) : n.toFixed(2);
 }
 
 function extractDocxtemplaterError(error: unknown): string {
