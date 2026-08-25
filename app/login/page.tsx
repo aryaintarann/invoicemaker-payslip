@@ -45,7 +45,7 @@ function LoginForm() {
     <div className="flex min-h-[100dvh] items-center justify-center bg-muted/30 px-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+          <div className="mb-1 flex size-11 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary">
             <Lock className="size-5" weight="bold" />
           </div>
           <CardTitle className="text-xl">Masuk</CardTitle>
