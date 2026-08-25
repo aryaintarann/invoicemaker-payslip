@@ -77,12 +77,6 @@ export default function PayslipDetailPage({ params }: { params: Promise<{ id: st
         >
           Download .xlsx
         </a>
-        <a
-          href={`/api/payslips/${payslipId}/generate?format=pdf`}
-          className="rounded border border-black/20 dark:border-white/20 px-4 py-2 text-sm"
-        >
-          Download PDF
-        </a>
         <Link
           href={`/payslips/${payslipId}/edit`}
           className="rounded border border-black/20 dark:border-white/20 px-4 py-2 text-sm"

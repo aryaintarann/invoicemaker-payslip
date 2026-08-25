@@ -101,12 +101,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         >
           Download .docx
         </a>
-        <a
-          href={`/api/invoices/${invoiceId}/generate?format=pdf`}
-          className="rounded border border-black/20 dark:border-white/20 px-4 py-2 text-sm"
-        >
-          Download PDF
-        </a>
         {canMarkPaid && (
           <button
             onClick={() => markPaidMutation.mutate()}
