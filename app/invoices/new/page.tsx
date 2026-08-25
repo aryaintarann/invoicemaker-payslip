@@ -3,10 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { invoicesApi } from "@/lib/api-client";
 import { invoiceHasTax } from "@/lib/invoice-tax";
 import { emptyInvoiceForm, InvoiceForm, InvoiceFormValues } from "../InvoiceForm";
+import { PageHeader } from "../../components/PageHeader";
 
 export default function NewInvoicePage() {
   const router = useRouter();
@@ -27,13 +29,15 @@ export default function NewInvoicePage() {
     },
     onSuccess: (invoice) => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Invoice baru tersimpan.");
       router.push(`/invoices/${invoice.id}`);
     },
+    onError: (err) => toast.error((err as Error).message),
   });
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold mb-6">Invoice Baru</h1>
+      <PageHeader title="Invoice Baru" />
       <InvoiceForm
         form={form}
         setForm={setForm}

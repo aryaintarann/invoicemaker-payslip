@@ -3,9 +3,25 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FileText, PencilSimple, Plus, Warning } from "@phosphor-icons/react";
+import { toast } from "sonner";
 
 import { invoicesApi } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { PageHeader } from "../components/PageHeader";
+import { DeleteConfirmButton } from "../components/DeleteConfirmButton";
+import { StatusBadge } from "../components/StatusBadge";
 
 const statuses = ["", "draft", "sent", "paid", "overdue"] as const;
 
@@ -27,96 +43,119 @@ export default function InvoicesPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => invoicesApi.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoices"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Invoice dihapus.");
+    },
+    onError: (err) => toast.error((err as Error).message),
   });
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Invoice</h1>
-        <Link href="/invoices/new" className="rounded bg-black text-white px-4 py-2 text-sm dark:bg-white dark:text-black">
-          + Invoice Baru
-        </Link>
-      </div>
+      <PageHeader
+        title="Invoice"
+        description="Buat, kelola, dan download invoice untuk klien."
+        action={
+          <Button nativeButton={false} render={<Link href="/invoices/new" />}>
+            <Plus className="size-4" />
+            Invoice Baru
+          </Button>
+        }
+      />
 
-      <div className="flex gap-2 mb-4">
+      <div className="mb-5 flex flex-wrap gap-1.5">
         {statuses.map((s) => (
           <button
             key={s || "all"}
             onClick={() => setStatus(s)}
-            className={`text-xs px-3 py-1 rounded-full border ${
+            className={cn(
+              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
               status === s
-                ? "bg-black text-white dark:bg-white dark:text-black"
-                : "border-black/20 dark:border-white/20"
-            }`}
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
           >
             {s ? statusLabel[s] : "Semua"}
           </button>
         ))}
       </div>
 
-      {isLoading && <p className="text-sm text-black/60">Memuat...</p>}
-      {error && <p className="text-sm text-red-600">{(error as Error).message}</p>}
-      {deleteMutation.isError && (
-        <p className="text-sm text-red-600 mb-2">{(deleteMutation.error as Error).message}</p>
+      {error && (
+        <p className="mb-4 flex items-center gap-1.5 text-sm text-destructive">
+          <Warning className="size-4 shrink-0" />
+          {(error as Error).message}
+        </p>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="text-left border-b border-black/10 dark:border-white/10">
-              <th className="py-2 pr-4">No. Invoice</th>
-              <th className="py-2 pr-4">Client</th>
-              <th className="py-2 pr-4">Proyek</th>
-              <th className="py-2 pr-4">Jatuh Tempo</th>
-              <th className="py-2 pr-4">Status</th>
-              <th className="py-2 pr-4">Total</th>
-              <th className="py-2 pr-4">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead>No. Invoice</TableHead>
+              <TableHead>Client</TableHead>
+              <TableHead>Proyek</TableHead>
+              <TableHead>Jatuh Tempo</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="w-24 text-right">Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading &&
+              Array.from({ length: 4 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell colSpan={7}>
+                    <Skeleton className="h-5 w-full" />
+                  </TableCell>
+                </TableRow>
+              ))}
             {data?.map((inv) => (
-              <tr key={inv.id} className="border-b border-black/5 dark:border-white/5">
-                <td className="py-2 pr-4">
-                  <Link href={`/invoices/${inv.id}`} className="hover:underline">
+              <TableRow key={inv.id}>
+                <TableCell className="font-medium">
+                  <Link href={`/invoices/${inv.id}`} className="hover:text-primary hover:underline">
                     {inv.invoiceNumber}
                   </Link>
-                </td>
-                <td className="py-2 pr-4">{inv.client?.name}</td>
-                <td className="py-2 pr-4">
-                  {inv.projectName} · {inv.entity.toUpperCase()} · {inv.invoiceLabel}
-                </td>
-                <td className="py-2 pr-4">{inv.dueDate}</td>
-                <td className="py-2 pr-4">{statusLabel[inv.status]}</td>
-                <td className="py-2 pr-4">{formatCurrency(inv.total)}</td>
-                <td className="py-2 pr-4">
-                  <div className="flex gap-3">
-                    <Link href={`/invoices/${inv.id}/edit`} className="hover:underline">
-                      Edit
-                    </Link>
-                    <button
-                      onClick={() => {
-                        if (confirm(`Hapus invoice "${inv.invoiceNumber}"?`)) {
-                          deleteMutation.mutate(inv.id);
-                        }
-                      }}
-                      className="text-red-600 hover:underline"
+                </TableCell>
+                <TableCell className="text-muted-foreground">{inv.client?.name}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {inv.projectName} &middot; {inv.entity.toUpperCase()} &middot; {inv.invoiceLabel}
+                </TableCell>
+                <TableCell className="text-muted-foreground">{inv.dueDate}</TableCell>
+                <TableCell>
+                  <StatusBadge status={inv.status} />
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{formatCurrency(inv.total)}</TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Edit invoice ${inv.invoiceNumber}`}
+                      nativeButton={false}
+                      render={<Link href={`/invoices/${inv.id}/edit`} />}
                     >
-                      Hapus
-                    </button>
+                      <PencilSimple className="size-4" />
+                    </Button>
+                    <DeleteConfirmButton
+                      itemLabel={`invoice "${inv.invoiceNumber}"`}
+                      onConfirm={() => deleteMutation.mutate(inv.id)}
+                    />
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
             {data?.length === 0 && (
-              <tr>
-                <td colSpan={7} className="py-4 text-black/50">
-                  Belum ada invoice.
-                </td>
-              </tr>
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={7} className="py-12 text-center">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <FileText className="size-8" />
+                    <p className="text-sm">Belum ada invoice.</p>
+                  </div>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

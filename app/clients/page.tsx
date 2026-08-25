@@ -2,8 +2,22 @@
 
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus, UsersThree, Warning } from "@phosphor-icons/react";
+import { toast } from "sonner";
 
 import { clientsApi } from "@/lib/api-client";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { PageHeader } from "../components/PageHeader";
+import { DeleteConfirmButton } from "../components/DeleteConfirmButton";
 
 export default function ClientsPage() {
   const queryClient = useQueryClient();
@@ -14,70 +28,81 @@ export default function ClientsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => clientsApi.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["clients"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      toast.success("Client dihapus.");
+    },
+    onError: (err) => toast.error((err as Error).message),
   });
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Client</h1>
-        <Link href="/clients/new" className="rounded bg-black text-white px-4 py-2 text-sm dark:bg-white dark:text-black">
-          + Client Baru
-        </Link>
-      </div>
+      <PageHeader
+        title="Client"
+        description="Kelola data client dan informasi kontaknya."
+        action={
+          <Button nativeButton={false} render={<Link href="/clients/new" />}>
+            <Plus className="size-4" />
+            Client Baru
+          </Button>
+        }
+      />
 
-      {isLoading && <p className="text-sm text-black/60">Memuat...</p>}
-      {error && <p className="text-sm text-red-600">{(error as Error).message}</p>}
-      {deleteMutation.isError && (
-        <p className="text-sm text-red-600 mb-2">{(deleteMutation.error as Error).message}</p>
+      {error && (
+        <p className="mb-4 flex items-center gap-1.5 text-sm text-destructive">
+          <Warning className="size-4 shrink-0" />
+          {(error as Error).message}
+        </p>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="text-left border-b border-black/10 dark:border-white/10">
-              <th className="py-2 pr-4">Nama</th>
-              <th className="py-2 pr-4">Email</th>
-              <th className="py-2 pr-4">Telepon</th>
-              <th className="py-2 pr-4">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead>Nama</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Telepon</TableHead>
+              <TableHead className="w-24 text-right">Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading &&
+              Array.from({ length: 3 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell colSpan={4}>
+                    <Skeleton className="h-5 w-full" />
+                  </TableCell>
+                </TableRow>
+              ))}
             {data?.map((c) => (
-              <tr key={c.id} className="border-b border-black/5 dark:border-white/5">
-                <td className="py-2 pr-4">
-                  <Link href={`/clients/${c.id}`} className="hover:underline">
+              <TableRow key={c.id}>
+                <TableCell className="font-medium">
+                  <Link href={`/clients/${c.id}`} className="hover:text-primary hover:underline">
                     {c.name}
                   </Link>
-                </td>
-                <td className="py-2 pr-4">{c.email || "-"}</td>
-                <td className="py-2 pr-4">{c.phone || "-"}</td>
-                <td className="py-2 pr-4">
-                  <div className="flex gap-3">
-                    <Link href={`/clients/${c.id}`} className="hover:underline">
-                      Edit
-                    </Link>
-                    <button
-                      onClick={() => {
-                        if (confirm(`Hapus client "${c.name}"?`)) deleteMutation.mutate(c.id);
-                      }}
-                      className="text-red-600 hover:underline"
-                    >
-                      Hapus
-                    </button>
-                  </div>
-                </td>
-              </tr>
+                </TableCell>
+                <TableCell className="text-muted-foreground">{c.email || "-"}</TableCell>
+                <TableCell className="text-muted-foreground">{c.phone || "-"}</TableCell>
+                <TableCell className="text-right">
+                  <DeleteConfirmButton
+                    itemLabel={`client "${c.name}"`}
+                    onConfirm={() => deleteMutation.mutate(c.id)}
+                  />
+                </TableCell>
+              </TableRow>
             ))}
             {data?.length === 0 && (
-              <tr>
-                <td colSpan={4} className="py-4 text-black/50">
-                  Belum ada client.
-                </td>
-              </tr>
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={4} className="py-12 text-center">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <UsersThree className="size-8" />
+                    <p className="text-sm">Belum ada client. Tambahkan client pertama Anda.</p>
+                  </div>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

@@ -3,9 +3,13 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { Payslip, payslipsApi } from "@/lib/api-client";
 import { PayslipForm, PayslipFormValues } from "../../PayslipForm";
+import { PageHeader } from "../../../components/PageHeader";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function toFormValues(payslip: Payslip): PayslipFormValues {
   return {
@@ -38,8 +42,10 @@ function EditForm({ payslip }: { payslip: Payslip }) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payslips"] });
+      toast.success("Perubahan tersimpan.");
       router.push(`/payslips/${payslip.id}`);
     },
+    onError: (err) => toast.error((err as Error).message),
   });
 
   return (
@@ -65,9 +71,15 @@ export default function EditPayslipPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="max-w-xl">
-      <h1 className="text-2xl font-semibold mb-6">Edit Slip Gaji</h1>
+      <PageHeader title="Edit Slip Gaji" />
       {!data ? (
-        <p className="text-sm text-black/60">Memuat...</p>
+        <Card>
+          <CardContent className="flex flex-col gap-5">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+          </CardContent>
+        </Card>
       ) : (
         <EditForm key={data.id} payslip={data} />
       )}

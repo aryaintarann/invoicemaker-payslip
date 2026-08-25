@@ -3,10 +3,14 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { Invoice, invoicesApi } from "@/lib/api-client";
 import { invoiceHasTax } from "@/lib/invoice-tax";
 import { InvoiceForm, InvoiceFormValues } from "../../InvoiceForm";
+import { PageHeader } from "../../../components/PageHeader";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function toFormValues(invoice: Invoice): InvoiceFormValues {
   return {
@@ -49,8 +53,10 @@ function EditForm({ invoice }: { invoice: Invoice }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Perubahan tersimpan.");
       router.push(`/invoices/${invoice.id}`);
     },
+    onError: (err) => toast.error((err as Error).message),
   });
 
   return (
@@ -76,9 +82,15 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold mb-6">Edit Invoice</h1>
+      <PageHeader title="Edit Invoice" />
       {!data ? (
-        <p className="text-sm text-black/60">Memuat...</p>
+        <Card>
+          <CardContent className="flex flex-col gap-5">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+          </CardContent>
+        </Card>
       ) : (
         <EditForm key={data.id} invoice={data} />
       )}

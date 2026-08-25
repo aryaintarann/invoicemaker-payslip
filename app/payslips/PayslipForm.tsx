@@ -2,8 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { Warning } from "@phosphor-icons/react";
 
 import { employeesApi } from "@/lib/api-client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { NativeSelect } from "../components/NativeSelect";
 
 export type PayslipFormValues = {
   employeeId: string;
@@ -26,6 +32,15 @@ export const emptyPayslipForm: PayslipFormValues = {
   biayaBpjs: "0",
   biayaBpjsJht: "0",
 };
+
+function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={htmlFor}>{label}</Label>
+      {children}
+    </div>
+  );
+}
 
 export function PayslipForm({
   form,
@@ -58,138 +73,135 @@ export function PayslipForm({
 
   return (
     <form
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-6"
       onSubmit={(e) => {
         e.preventDefault();
         onSubmit();
       }}
     >
-      <label className="flex flex-col gap-1 text-sm">
-        Karyawan
-        <select
-          required
-          className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-          value={form.employeeId}
-          onChange={(e) => {
-            const employeeId = e.target.value;
-            const emp = employees?.find((x) => String(x.id) === employeeId);
-            setForm({
-              ...form,
-              employeeId,
-              gajiPokok: emp ? emp.baseSalary : form.gajiPokok,
-            });
-          }}
-        >
-          <option value="">Pilih karyawan</option>
-          {employees?.map((emp) => (
-            <option key={emp.id} value={emp.id}>
-              {emp.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <Card>
+        <CardContent className="flex flex-col gap-5">
+          <Field label="Karyawan" htmlFor="employeeId">
+            <NativeSelect
+              id="employeeId"
+              required
+              value={form.employeeId}
+              onChange={(e) => {
+                const employeeId = e.target.value;
+                const emp = employees?.find((x) => String(x.id) === employeeId);
+                setForm({
+                  ...form,
+                  employeeId,
+                  gajiPokok: emp ? emp.baseSalary : form.gajiPokok,
+                });
+              }}
+            >
+              <option value="">Pilih karyawan</option>
+              {employees?.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.name}
+                </option>
+              ))}
+            </NativeSelect>
+          </Field>
 
-      <div className="grid grid-cols-2 gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          Periode (YYYY-MM)
-          <input
-            required
-            placeholder="2026-08"
-            pattern="\d{4}-\d{2}"
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={form.period}
-            onChange={(e) => setForm({ ...form, period: e.target.value })}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Tanggal Slip
-          <input
-            type="date"
-            required
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={form.issueDate}
-            onChange={(e) => setForm({ ...form, issueDate: e.target.value })}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Jumlah Hari Kerja
-          <input
-            type="number"
-            required
-            min={0}
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={form.jumlahHariKerja}
-            onChange={(e) => setForm({ ...form, jumlahHariKerja: e.target.value })}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Gaji Pokok
-          <input
-            type="number"
-            required
-            min={0}
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={form.gajiPokok}
-            onChange={(e) => setForm({ ...form, gajiPokok: e.target.value })}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Uang Transport + Makan (per hari)
-          <input
-            type="number"
-            required
-            min={0}
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={form.uangTransportMakanPerHari}
-            onChange={(e) => setForm({ ...form, uangTransportMakanPerHari: e.target.value })}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Tambahan BPJS Tenagakerja
-          <input
-            type="number"
-            min={0}
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={form.biayaBpjs}
-            onChange={(e) => setForm({ ...form, biayaBpjs: e.target.value })}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Potongan BPJS JHT
-          <input
-            type="number"
-            min={0}
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={form.biayaBpjsJht}
-            onChange={(e) => setForm({ ...form, biayaBpjsJht: e.target.value })}
-          />
-        </label>
-      </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Periode (YYYY-MM)" htmlFor="period">
+              <Input
+                id="period"
+                required
+                placeholder="2026-08"
+                pattern="\d{4}-\d{2}"
+                value={form.period}
+                onChange={(e) => setForm({ ...form, period: e.target.value })}
+              />
+            </Field>
+            <Field label="Tanggal Slip" htmlFor="issueDate">
+              <Input
+                id="issueDate"
+                type="date"
+                required
+                value={form.issueDate}
+                onChange={(e) => setForm({ ...form, issueDate: e.target.value })}
+              />
+            </Field>
+            <Field label="Jumlah Hari Kerja" htmlFor="jumlahHariKerja">
+              <Input
+                id="jumlahHariKerja"
+                type="number"
+                required
+                min={0}
+                value={form.jumlahHariKerja}
+                onChange={(e) => setForm({ ...form, jumlahHariKerja: e.target.value })}
+              />
+            </Field>
+            <Field label="Gaji Pokok" htmlFor="gajiPokok">
+              <Input
+                id="gajiPokok"
+                type="number"
+                required
+                min={0}
+                value={form.gajiPokok}
+                onChange={(e) => setForm({ ...form, gajiPokok: e.target.value })}
+              />
+            </Field>
+            <Field label="Uang Transport + Makan (per hari)" htmlFor="uangTransportMakanPerHari">
+              <Input
+                id="uangTransportMakanPerHari"
+                type="number"
+                required
+                min={0}
+                value={form.uangTransportMakanPerHari}
+                onChange={(e) => setForm({ ...form, uangTransportMakanPerHari: e.target.value })}
+              />
+            </Field>
+            <Field label="Tambahan BPJS Tenagakerja" htmlFor="biayaBpjs">
+              <Input
+                id="biayaBpjs"
+                type="number"
+                min={0}
+                value={form.biayaBpjs}
+                onChange={(e) => setForm({ ...form, biayaBpjs: e.target.value })}
+              />
+            </Field>
+            <Field label="Potongan BPJS JHT" htmlFor="biayaBpjsJht">
+              <Input
+                id="biayaBpjsJht"
+                type="number"
+                min={0}
+                value={form.biayaBpjsJht}
+                onChange={(e) => setForm({ ...form, biayaBpjsJht: e.target.value })}
+              />
+            </Field>
+          </div>
 
-      <div className="rounded border border-black/10 dark:border-white/10 p-4 text-sm flex flex-col gap-1">
-        <div className="flex justify-between">
-          <span>Transport + Makan ({form.jumlahHariKerja || 0} hari)</span>
-          <span>{preview.transportTotal.toLocaleString("id-ID")}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Total Pendapatan</span>
-          <span>{preview.totalPendapatan.toLocaleString("id-ID")}</span>
-        </div>
-        <div className="flex justify-between font-medium">
-          <span>Total Gaji</span>
-          <span>{preview.total.toLocaleString("id-ID")}</span>
-        </div>
-      </div>
+          <div className="rounded-lg bg-muted/60 p-4 text-sm">
+            <div className="flex justify-between py-1">
+              <span className="text-muted-foreground">Transport + Makan ({form.jumlahHariKerja || 0} hari)</span>
+              <span className="tabular-nums">{preview.transportTotal.toLocaleString("id-ID")}</span>
+            </div>
+            <div className="flex justify-between py-1">
+              <span className="text-muted-foreground">Total Pendapatan</span>
+              <span className="tabular-nums">{preview.totalPendapatan.toLocaleString("id-ID")}</span>
+            </div>
+            <div className="mt-1 flex justify-between border-t border-border pt-2 font-medium">
+              <span>Total Gaji</span>
+              <span className="tabular-nums">{preview.total.toLocaleString("id-ID")}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && (
+        <p className="flex items-center gap-1.5 text-sm text-destructive">
+          <Warning className="size-4 shrink-0" />
+          {error}
+        </p>
+      )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-black text-white px-4 py-2 text-sm dark:bg-white dark:text-black disabled:opacity-50 w-fit"
-      >
+      <Button type="submit" disabled={pending} className="w-fit">
         {pending ? "Menyimpan..." : submitLabel}
-      </button>
+      </Button>
     </form>
   );
 }

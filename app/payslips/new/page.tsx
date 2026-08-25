@@ -3,9 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { payslipsApi } from "@/lib/api-client";
 import { emptyPayslipForm, PayslipForm, PayslipFormValues } from "../PayslipForm";
+import { PageHeader } from "../../components/PageHeader";
 
 export default function NewPayslipPage() {
   const router = useRouter();
@@ -24,13 +26,15 @@ export default function NewPayslipPage() {
       }),
     onSuccess: (payslip) => {
       queryClient.invalidateQueries({ queryKey: ["payslips"] });
+      toast.success("Slip gaji baru tersimpan.");
       router.push(`/payslips/${payslip.id}`);
     },
+    onError: (err) => toast.error((err as Error).message),
   });
 
   return (
     <div className="max-w-xl">
-      <h1 className="text-2xl font-semibold mb-6">Slip Gaji Baru</h1>
+      <PageHeader title="Slip Gaji Baru" />
       <PayslipForm
         form={form}
         setForm={setForm}

@@ -4,16 +4,26 @@ import { use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle, DownloadSimple, PencilSimple, Warning } from "@phosphor-icons/react";
+import { toast } from "sonner";
 
 import { invoicesApi } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "../../components/PageHeader";
+import { StatusBadge } from "../../components/StatusBadge";
+import { DeleteConfirmButton } from "../../components/DeleteConfirmButton";
 
-const statusLabel: Record<string, string> = {
-  draft: "Draft",
-  sent: "Terkirim",
-  paid: "Lunas",
-  overdue: "Jatuh Tempo",
-};
+function Row({ label, value, strong }: { label: string; value: React.ReactNode; strong?: boolean }) {
+  return (
+    <div className={`flex justify-between border-b border-border py-2.5 last:border-0 ${strong ? "font-medium" : ""}`}>
+      <span className={strong ? "" : "text-muted-foreground"}>{label}</span>
+      <span className="tabular-nums">{value}</span>
+    </div>
+  );
+}
 
 export default function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -31,7 +41,9 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["invoices", invoiceId] });
+      toast.success("Invoice ditandai lunas.");
     },
+    onError: (err) => toast.error((err as Error).message),
   });
 
   const deleteMutation = useMutation({
@@ -40,93 +52,84 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       router.push("/invoices");
     },
+    onError: (err) => toast.error((err as Error).message),
   });
 
-  if (!data) return <p className="text-sm text-black/60">Memuat...</p>;
+  if (!data) {
+    return (
+      <div className="max-w-2xl">
+        <PageHeader title="Invoice" />
+        <Card>
+          <CardContent className="flex flex-col gap-3">
+            <Skeleton className="h-6 w-1/3" />
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="mt-4 h-40 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const canMarkPaid = data.status === "sent" || data.status === "overdue";
 
   return (
     <div className="max-w-2xl">
-      <div className="flex items-center justify-between mb-2">
-        <h1 className="text-2xl font-semibold">{data.invoiceNumber}</h1>
-        <span className="text-xs px-3 py-1 rounded-full border border-black/20 dark:border-white/20">
-          {statusLabel[data.status]}
-        </span>
-      </div>
-      <p className="text-sm text-black/60 mb-1">
-        {data.client?.name} · {data.entity.toUpperCase()} · {data.invoiceLabel} · {data.projectName}
-      </p>
-      <p className="text-sm text-black/60 mb-6">
-        Terbit {data.issueDate} · Jatuh tempo {data.dueDate}
+      <PageHeader
+        title={data.invoiceNumber}
+        description={`${data.client?.name} · ${data.entity.toUpperCase()} · ${data.invoiceLabel} · ${data.projectName}`}
+        action={<StatusBadge status={data.status} />}
+      />
+      <p className="-mt-6 mb-6 text-sm text-muted-foreground">
+        Terbit {data.issueDate} &middot; Jatuh tempo {data.dueDate}
       </p>
 
-      <table className="w-full text-sm border-collapse mb-4">
-        <tbody>
-          <tr className="border-b border-black/5 dark:border-white/5">
-            <td className="py-2">Nilai Kontrak</td>
-            <td className="py-2 text-right">{formatCurrency(data.contractValue)}</td>
-          </tr>
-          <tr className="border-b border-black/5 dark:border-white/5">
-            <td className="py-2">Persen Tagihan ({data.invoicePercent}%)</td>
-            <td className="py-2 text-right">{formatCurrency(data.billedAmount)}</td>
-          </tr>
-          <tr className="border-b border-black/5 dark:border-white/5">
-            <td className="py-2">Sisa</td>
-            <td className="py-2 text-right">{formatCurrency(data.remainingAmount)}</td>
-          </tr>
+      <Card className="mb-6">
+        <CardContent>
+          <Row label="Nilai Kontrak" value={formatCurrency(data.contractValue)} />
+          <Row label={`Persen Tagihan (${data.invoicePercent}%)`} value={formatCurrency(data.billedAmount)} />
+          <Row label="Sisa" value={formatCurrency(data.remainingAmount)} />
           {data.entity === "cv" && (
             <>
-              <tr className="border-b border-black/5 dark:border-white/5">
-                <td className="py-2">PPN ({data.ppnPercent}%)</td>
-                <td className="py-2 text-right">+{formatCurrency(data.ppnAmount ?? "0")}</td>
-              </tr>
-              <tr className="border-b border-black/5 dark:border-white/5">
-                <td className="py-2">PPh ({data.pphPercent}%)</td>
-                <td className="py-2 text-right">-{formatCurrency(data.pphAmount ?? "0")}</td>
-              </tr>
+              <Row label={`PPN (${data.ppnPercent}%)`} value={`+${formatCurrency(data.ppnAmount ?? "0")}`} />
+              <Row label={`PPh (${data.pphPercent}%)`} value={`-${formatCurrency(data.pphAmount ?? "0")}`} />
             </>
           )}
-          <tr>
-            <td className="py-2 font-medium">Total Tagihan</td>
-            <td className="py-2 text-right font-medium">{formatCurrency(data.total)}</td>
-          </tr>
-        </tbody>
-      </table>
+          <Row label="Total Tagihan" value={formatCurrency(data.total)} strong />
+        </CardContent>
+      </Card>
 
-      <div className="flex gap-3 flex-wrap">
-        <a
-          href={`/api/invoices/${invoiceId}/generate`}
-          className="rounded bg-black text-white px-4 py-2 text-sm dark:bg-white dark:text-black"
-        >
+      <div className="flex flex-wrap gap-3">
+        <Button nativeButton={false} render={<a href={`/api/invoices/${invoiceId}/generate`} />}>
+          <DownloadSimple className="size-4" />
           Download .docx
-        </a>
+        </Button>
         {canMarkPaid && (
-          <button
+          <Button
+            variant="outline"
             onClick={() => markPaidMutation.mutate()}
             disabled={markPaidMutation.isPending}
-            className="rounded border border-black/20 dark:border-white/20 px-4 py-2 text-sm disabled:opacity-50"
           >
+            <CheckCircle className="size-4" />
             Tandai Lunas
-          </button>
+          </Button>
         )}
-        <Link
-          href={`/invoices/${invoiceId}/edit`}
-          className="rounded border border-black/20 dark:border-white/20 px-4 py-2 text-sm"
-        >
+        <Button variant="outline" nativeButton={false} render={<Link href={`/invoices/${invoiceId}/edit`} />}>
+          <PencilSimple className="size-4" />
           Edit
-        </Link>
-        <button
-          onClick={() => deleteMutation.mutate()}
-          disabled={deleteMutation.isPending}
-          className="rounded border border-red-600 text-red-600 px-4 py-2 text-sm disabled:opacity-50"
-        >
-          Hapus
-        </button>
+        </Button>
+        <DeleteConfirmButton
+          variant="full"
+          itemLabel={`invoice "${data.invoiceNumber}"`}
+          pending={deleteMutation.isPending}
+          onConfirm={() => deleteMutation.mutate()}
+        />
       </div>
 
       {markPaidMutation.isError && (
-        <p className="text-sm text-red-600 mt-3">{(markPaidMutation.error as Error).message}</p>
+        <p className="mt-3 flex items-center gap-1.5 text-sm text-destructive">
+          <Warning className="size-4 shrink-0" />
+          {(markPaidMutation.error as Error).message}
+        </p>
       )}
     </div>
   );

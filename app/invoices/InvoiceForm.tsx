@@ -2,9 +2,15 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { Info, Warning } from "@phosphor-icons/react";
 
 import { clientsApi } from "@/lib/api-client";
 import { invoiceHasTax } from "@/lib/invoice-tax";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { NativeSelect } from "../components/NativeSelect";
 
 export type InvoiceFormValues = {
   clientId: string;
@@ -49,6 +55,15 @@ const kindDefaultLabel: Record<string, string> = {
   final: "Final",
 };
 
+function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={htmlFor}>{label}</Label>
+      {children}
+    </div>
+  );
+}
+
 export function InvoiceForm({
   form,
   setForm,
@@ -83,251 +98,245 @@ export function InvoiceForm({
 
   return (
     <form
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-6"
       onSubmit={(e) => {
         e.preventDefault();
         onSubmit();
       }}
     >
-      <label className="flex flex-col gap-1 text-sm">
-        Client
-        <select
-          required
-          className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-          value={form.clientId}
-          onChange={(e) => setForm({ ...form, clientId: e.target.value })}
-        >
-          <option value="">Pilih client</option>
-          {clients?.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <Card>
+        <CardContent className="flex flex-col gap-5">
+          <Field label="Client" htmlFor="clientId">
+            <NativeSelect
+              id="clientId"
+              required
+              value={form.clientId}
+              onChange={(e) => setForm({ ...form, clientId: e.target.value })}
+            >
+              <option value="">Pilih client</option>
+              {clients?.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </NativeSelect>
+          </Field>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Nama Kontak (opsional, mis. &quot;Bapak Wiwin&quot;)
-        <input
-          className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-          value={form.clientAttn}
-          onChange={(e) => setForm({ ...form, clientAttn: e.target.value })}
-        />
-      </label>
+          <Field label='Nama Kontak (opsional, mis. "Bapak Wiwin")' htmlFor="clientAttn">
+            <Input
+              id="clientAttn"
+              value={form.clientAttn}
+              onChange={(e) => setForm({ ...form, clientAttn: e.target.value })}
+            />
+          </Field>
 
-      <div className="grid grid-cols-3 gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          Entity
-          <select
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={form.entity}
-            onChange={(e) => setForm({ ...form, entity: e.target.value as "cv" | "op" })}
-          >
-            <option value="op">OP (Individu, tanpa PPN/PPh)</option>
-            <option value="cv">CV (dengan PPN/PPh)</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Jenis
-          <select
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={form.kind}
-            onChange={(e) => {
-              const kind = e.target.value as "dp" | "final";
-              setForm({ ...form, kind, invoiceLabel: kindDefaultLabel[kind] });
-            }}
-          >
-            <option value="dp">DP (Down Payment)</option>
-            <option value="final">Final</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Bahasa
-          <select
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={form.language}
-            onChange={(e) => setForm({ ...form, language: e.target.value as "id" | "en" })}
-          >
-            <option value="id">Indonesia</option>
-            <option value="en">Inggris</option>
-          </select>
-        </label>
-      </div>
-      {form.entity === "op" && form.kind === "final" && form.language === "en" && (
-        <p className="text-xs text-black/50 -mt-2">
-          Catatan: template OP Final versi Inggris tetap menyertakan PPN/PPh, berbeda dari OP lainnya.
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Field label="Entity" htmlFor="entity">
+              <NativeSelect
+                id="entity"
+                value={form.entity}
+                onChange={(e) => setForm({ ...form, entity: e.target.value as "cv" | "op" })}
+              >
+                <option value="op">OP (Individu, tanpa PPN/PPh)</option>
+                <option value="cv">CV (dengan PPN/PPh)</option>
+              </NativeSelect>
+            </Field>
+            <Field label="Jenis" htmlFor="kind">
+              <NativeSelect
+                id="kind"
+                value={form.kind}
+                onChange={(e) => {
+                  const kind = e.target.value as "dp" | "final";
+                  setForm({ ...form, kind, invoiceLabel: kindDefaultLabel[kind] });
+                }}
+              >
+                <option value="dp">DP (Down Payment)</option>
+                <option value="final">Final</option>
+              </NativeSelect>
+            </Field>
+            <Field label="Bahasa" htmlFor="language">
+              <NativeSelect
+                id="language"
+                value={form.language}
+                onChange={(e) => setForm({ ...form, language: e.target.value as "id" | "en" })}
+              >
+                <option value="id">Indonesia</option>
+                <option value="en">Inggris</option>
+              </NativeSelect>
+            </Field>
+          </div>
+          {form.entity === "op" && form.kind === "final" && form.language === "en" && (
+            <p className="-mt-2 flex items-start gap-1.5 text-xs text-muted-foreground">
+              <Info className="mt-0.5 size-3.5 shrink-0" />
+              Template OP Final versi Inggris tetap menyertakan PPN/PPh, berbeda dari OP lainnya.
+            </p>
+          )}
+
+          <Field label='Label Invoice (teks yang tercetak, mis. "1st DP", "50% DP (Down Payment)", "Final")' htmlFor="invoiceLabel">
+            <Input
+              id="invoiceLabel"
+              required
+              value={form.invoiceLabel}
+              onChange={(e) => setForm({ ...form, invoiceLabel: e.target.value })}
+            />
+          </Field>
+
+          <Field label="Nama Proyek" htmlFor="projectName">
+            <Input
+              id="projectName"
+              required
+              value={form.projectName}
+              onChange={(e) => setForm({ ...form, projectName: e.target.value })}
+            />
+          </Field>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="No. Invoice" htmlFor="invoiceNumber">
+              <Input
+                id="invoiceNumber"
+                required
+                value={form.invoiceNumber}
+                onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })}
+              />
+            </Field>
+            <Field label="Status" htmlFor="status">
+              <NativeSelect
+                id="status"
+                value={form.status}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    status: e.target.value as "draft" | "sent" | "paid" | "overdue",
+                  })
+                }
+              >
+                <option value="draft">Draft</option>
+                <option value="sent">Terkirim</option>
+                <option value="paid">Lunas</option>
+                <option value="overdue">Jatuh Tempo</option>
+              </NativeSelect>
+            </Field>
+            <Field label="Tanggal Terbit" htmlFor="issueDate">
+              <Input
+                id="issueDate"
+                type="date"
+                required
+                value={form.issueDate}
+                onChange={(e) => setForm({ ...form, issueDate: e.target.value })}
+              />
+            </Field>
+            <Field label="Jatuh Tempo" htmlFor="dueDate">
+              <Input
+                id="dueDate"
+                type="date"
+                required
+                value={form.dueDate}
+                onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+              />
+            </Field>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-col gap-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Nilai Kontrak (Rp)" htmlFor="contractValue">
+              <Input
+                id="contractValue"
+                type="number"
+                required
+                min={0}
+                value={form.contractValue}
+                onChange={(e) => setForm({ ...form, contractValue: e.target.value })}
+              />
+            </Field>
+            <Field label="Persen Tagihan Ini (%)" htmlFor="invoicePercent">
+              <Input
+                id="invoicePercent"
+                type="number"
+                required
+                min={0.01}
+                max={100}
+                step="any"
+                value={form.invoicePercent}
+                onChange={(e) => setForm({ ...form, invoicePercent: e.target.value })}
+              />
+            </Field>
+          </div>
+
+          {hasTax && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Field label="PPN (%)" htmlFor="ppnPercent">
+                <Input
+                  id="ppnPercent"
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={form.ppnPercent}
+                  onChange={(e) => setForm({ ...form, ppnPercent: e.target.value })}
+                />
+              </Field>
+              <Field label="PPh (%)" htmlFor="pphPercent">
+                <Input
+                  id="pphPercent"
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={form.pphPercent}
+                  onChange={(e) => setForm({ ...form, pphPercent: e.target.value })}
+                />
+              </Field>
+              <Field label="Batas Kirim Bukti Potong" htmlFor="pphDeadline">
+                <Input
+                  id="pphDeadline"
+                  type="date"
+                  value={form.pphDeadline}
+                  onChange={(e) => setForm({ ...form, pphDeadline: e.target.value })}
+                />
+              </Field>
+            </div>
+          )}
+
+          <div className="rounded-lg bg-muted/60 p-4 text-sm">
+            <div className="flex justify-between py-1">
+              <span className="text-muted-foreground">Jumlah Tagihan</span>
+              <span className="tabular-nums">{preview.billed.toLocaleString("id-ID")}</span>
+            </div>
+            <div className="flex justify-between py-1">
+              <span className="text-muted-foreground">Sisa</span>
+              <span className="tabular-nums">{preview.remaining.toLocaleString("id-ID")}</span>
+            </div>
+            {hasTax && (
+              <>
+                <div className="flex justify-between py-1">
+                  <span className="text-muted-foreground">PPN</span>
+                  <span className="tabular-nums">{preview.ppn.toLocaleString("id-ID")}</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-muted-foreground">PPh</span>
+                  <span className="tabular-nums">-{preview.pph.toLocaleString("id-ID")}</span>
+                </div>
+              </>
+            )}
+            <div className="mt-1 flex justify-between border-t border-border pt-2 font-medium">
+              <span>Total Tagihan</span>
+              <span className="tabular-nums">{preview.total.toLocaleString("id-ID")}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {error && (
+        <p className="flex items-center gap-1.5 text-sm text-destructive">
+          <Warning className="size-4 shrink-0" />
+          {error}
         </p>
       )}
 
-      <label className="flex flex-col gap-1 text-sm">
-        Label Invoice (teks yang tercetak, mis. &quot;1st DP&quot;, &quot;50% DP (Down Payment)&quot;, &quot;Final&quot;)
-        <input
-          required
-          className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-          value={form.invoiceLabel}
-          onChange={(e) => setForm({ ...form, invoiceLabel: e.target.value })}
-        />
-      </label>
-
-      <label className="flex flex-col gap-1 text-sm">
-        Nama Proyek
-        <input
-          required
-          className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-          value={form.projectName}
-          onChange={(e) => setForm({ ...form, projectName: e.target.value })}
-        />
-      </label>
-
-      <div className="grid grid-cols-2 gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          No. Invoice
-          <input
-            required
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={form.invoiceNumber}
-            onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Status
-          <select
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={form.status}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                status: e.target.value as "draft" | "sent" | "paid" | "overdue",
-              })
-            }
-          >
-            <option value="draft">Draft</option>
-            <option value="sent">Terkirim</option>
-            <option value="paid">Lunas</option>
-            <option value="overdue">Jatuh Tempo</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Tanggal Terbit
-          <input
-            type="date"
-            required
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={form.issueDate}
-            onChange={(e) => setForm({ ...form, issueDate: e.target.value })}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Jatuh Tempo
-          <input
-            type="date"
-            required
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={form.dueDate}
-            onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-          />
-        </label>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          Nilai Kontrak (Rp)
-          <input
-            type="number"
-            required
-            min={0}
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={form.contractValue}
-            onChange={(e) => setForm({ ...form, contractValue: e.target.value })}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Persen Tagihan Ini (%)
-          <input
-            type="number"
-            required
-            min={0.01}
-            max={100}
-            step="any"
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={form.invoicePercent}
-            onChange={(e) => setForm({ ...form, invoicePercent: e.target.value })}
-          />
-        </label>
-      </div>
-
-      {hasTax && (
-        <div className="grid grid-cols-3 gap-4">
-          <label className="flex flex-col gap-1 text-sm">
-            PPN (%)
-            <input
-              type="number"
-              min={0}
-              step="any"
-              className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-              value={form.ppnPercent}
-              onChange={(e) => setForm({ ...form, ppnPercent: e.target.value })}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            PPh (%)
-            <input
-              type="number"
-              min={0}
-              step="any"
-              className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-              value={form.pphPercent}
-              onChange={(e) => setForm({ ...form, pphPercent: e.target.value })}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            Batas Kirim Bukti Potong
-            <input
-              type="date"
-              className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-              value={form.pphDeadline}
-              onChange={(e) => setForm({ ...form, pphDeadline: e.target.value })}
-            />
-          </label>
-        </div>
-      )}
-
-      <div className="rounded border border-black/10 dark:border-white/10 p-4 text-sm flex flex-col gap-1">
-        <div className="flex justify-between">
-          <span>Jumlah Tagihan</span>
-          <span>{preview.billed.toLocaleString("id-ID")}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Sisa</span>
-          <span>{preview.remaining.toLocaleString("id-ID")}</span>
-        </div>
-        {hasTax && (
-          <>
-            <div className="flex justify-between">
-              <span>PPN</span>
-              <span>{preview.ppn.toLocaleString("id-ID")}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>PPh</span>
-              <span>-{preview.pph.toLocaleString("id-ID")}</span>
-            </div>
-          </>
-        )}
-        <div className="flex justify-between font-medium">
-          <span>Total Tagihan</span>
-          <span>{preview.total.toLocaleString("id-ID")}</span>
-        </div>
-      </div>
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
-
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-black text-white px-4 py-2 text-sm dark:bg-white dark:text-black disabled:opacity-50 w-fit"
-      >
+      <Button type="submit" disabled={pending} className="w-fit">
         {pending ? "Menyimpan..." : submitLabel}
-      </button>
+      </Button>
     </form>
   );
 }

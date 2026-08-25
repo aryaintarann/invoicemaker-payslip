@@ -2,6 +2,12 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { LockKey, Warning } from "@phosphor-icons/react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 function LoginForm() {
   const router = useRouter();
@@ -36,41 +42,49 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm flex flex-col gap-4 rounded-lg border border-black/10 dark:border-white/10 p-6"
-      >
-        <h1 className="text-xl font-semibold text-center mb-2">Masuk</h1>
-        <label className="flex flex-col gap-1 text-sm">
-          Username
-          <input
-            required
-            autoFocus
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Password
-          <input
-            required
-            type="password"
-            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded bg-black text-white px-4 py-2 text-sm dark:bg-white dark:text-black disabled:opacity-50"
-        >
-          {pending ? "Memproses..." : "Masuk"}
-        </button>
-      </form>
+    <div className="flex min-h-[100dvh] items-center justify-center bg-muted/30 px-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader className="items-center text-center">
+          <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+            <LockKey className="size-5" weight="bold" />
+          </div>
+          <CardTitle className="text-xl">Masuk</CardTitle>
+          <CardDescription>Aplikasi invoice dan slip gaji</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                required
+                autoFocus
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                required
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            {error && (
+              <p className="flex items-center gap-1.5 text-sm text-destructive">
+                <Warning className="size-4 shrink-0" />
+                {error}
+              </p>
+            )}
+            <Button type="submit" disabled={pending} className="mt-1">
+              {pending ? "Memproses..." : "Masuk"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

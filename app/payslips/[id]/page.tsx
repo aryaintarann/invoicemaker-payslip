@@ -4,9 +4,24 @@ import { use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { DownloadSimple, PencilSimple } from "@phosphor-icons/react";
 
 import { payslipsApi } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "../../components/PageHeader";
+import { DeleteConfirmButton } from "../../components/DeleteConfirmButton";
+
+function Row({ label, value, strong }: { label: string; value: React.ReactNode; strong?: boolean }) {
+  return (
+    <div className={`flex justify-between border-b border-border py-2.5 last:border-0 ${strong ? "font-medium" : ""}`}>
+      <span className={strong ? "" : "text-muted-foreground"}>{label}</span>
+      <span className="tabular-nums">{value}</span>
+    </div>
+  );
+}
 
 export default function PayslipDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -27,69 +42,60 @@ export default function PayslipDetailPage({ params }: { params: Promise<{ id: st
     },
   });
 
-  if (!data) return <p className="text-sm text-black/60">Memuat...</p>;
+  if (!data) {
+    return (
+      <div className="max-w-xl">
+        <PageHeader title="Slip Gaji" />
+        <Card>
+          <CardContent className="flex flex-col gap-3">
+            <Skeleton className="h-6 w-1/3" />
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="mt-4 h-40 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const transportTotal = Number(data.uangTransportMakanPerHari) * data.jumlahHariKerja;
   const totalPendapatan = Number(data.gajiPokok) + transportTotal + Number(data.biayaBpjs);
 
   return (
     <div className="max-w-xl">
-      <h1 className="text-2xl font-semibold mb-1">{data.employee?.name}</h1>
-      <p className="text-sm text-black/60 mb-6">
-        {data.employee?.position} · Periode {data.period} · {data.jumlahHariKerja} hari kerja
-      </p>
+      <PageHeader
+        title={data.employee?.name ?? "-"}
+        description={`${data.employee?.position ?? "-"} · Periode ${data.period} · ${data.jumlahHariKerja} hari kerja`}
+      />
 
-      <table className="w-full text-sm border-collapse mb-4">
-        <tbody>
-          <tr className="border-b border-black/5 dark:border-white/5">
-            <td className="py-2">Gaji Pokok</td>
-            <td className="py-2 text-right">{formatCurrency(data.gajiPokok)}</td>
-          </tr>
-          <tr className="border-b border-black/5 dark:border-white/5">
-            <td className="py-2">
-              Transport + Makan ({formatCurrency(data.uangTransportMakanPerHari)} × {data.jumlahHariKerja})
-            </td>
-            <td className="py-2 text-right">+{formatCurrency(transportTotal)}</td>
-          </tr>
-          <tr className="border-b border-black/5 dark:border-white/5">
-            <td className="py-2">Tambahan BPJS Tenagakerja</td>
-            <td className="py-2 text-right">+{formatCurrency(data.biayaBpjs)}</td>
-          </tr>
-          <tr className="border-b border-black/5 dark:border-white/5">
-            <td className="py-2 font-medium">Total Pendapatan</td>
-            <td className="py-2 text-right font-medium">{formatCurrency(totalPendapatan)}</td>
-          </tr>
-          <tr className="border-b border-black/5 dark:border-white/5">
-            <td className="py-2">Potongan BPJS JHT</td>
-            <td className="py-2 text-right">-{formatCurrency(data.biayaBpjsJht)}</td>
-          </tr>
-          <tr>
-            <td className="py-2 font-medium">Total Gaji</td>
-            <td className="py-2 text-right font-medium">{formatCurrency(data.total)}</td>
-          </tr>
-        </tbody>
-      </table>
+      <Card className="mb-6">
+        <CardContent>
+          <Row label="Gaji Pokok" value={formatCurrency(data.gajiPokok)} />
+          <Row
+            label={`Transport + Makan (${formatCurrency(data.uangTransportMakanPerHari)} × ${data.jumlahHariKerja})`}
+            value={`+${formatCurrency(transportTotal)}`}
+          />
+          <Row label="Tambahan BPJS Tenagakerja" value={`+${formatCurrency(data.biayaBpjs)}`} />
+          <Row label="Total Pendapatan" value={formatCurrency(totalPendapatan)} strong />
+          <Row label="Potongan BPJS JHT" value={`-${formatCurrency(data.biayaBpjsJht)}`} />
+          <Row label="Total Gaji" value={formatCurrency(data.total)} strong />
+        </CardContent>
+      </Card>
 
-      <div className="flex gap-3">
-        <a
-          href={`/api/payslips/${payslipId}/generate`}
-          className="rounded bg-black text-white px-4 py-2 text-sm dark:bg-white dark:text-black"
-        >
+      <div className="flex flex-wrap gap-3">
+        <Button nativeButton={false} render={<a href={`/api/payslips/${payslipId}/generate`} />}>
+          <DownloadSimple className="size-4" />
           Download .xlsx
-        </a>
-        <Link
-          href={`/payslips/${payslipId}/edit`}
-          className="rounded border border-black/20 dark:border-white/20 px-4 py-2 text-sm"
-        >
+        </Button>
+        <Button variant="outline" nativeButton={false} render={<Link href={`/payslips/${payslipId}/edit`} />}>
+          <PencilSimple className="size-4" />
           Edit
-        </Link>
-        <button
-          onClick={() => deleteMutation.mutate()}
-          disabled={deleteMutation.isPending}
-          className="rounded border border-red-600 text-red-600 px-4 py-2 text-sm disabled:opacity-50"
-        >
-          Hapus
-        </button>
+        </Button>
+        <DeleteConfirmButton
+          variant="full"
+          itemLabel={`slip gaji "${data.employee?.name}" periode ${data.period}`}
+          pending={deleteMutation.isPending}
+          onConfirm={() => deleteMutation.mutate()}
+        />
       </div>
     </div>
   );
