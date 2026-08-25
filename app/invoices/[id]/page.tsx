@@ -1,6 +1,7 @@
 "use client";
 
 import { use } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -109,6 +110,14 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           >
             Tandai Lunas
           </button>
+        )}
+        {isDraft && (
+          <Link
+            href={`/invoices/${invoiceId}/edit`}
+            className="rounded border border-black/20 dark:border-white/20 px-4 py-2 text-sm"
+          >
+            Edit
+          </Link>
         )}
         {isDraft && (
           <button

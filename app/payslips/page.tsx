@@ -1,15 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { payslipsApi } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
 
 export default function PayslipsPage() {
+  const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
     queryKey: ["payslips"],
     queryFn: () => payslipsApi.list(),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => payslipsApi.remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payslips"] }),
   });
 
   return (
@@ -23,6 +29,9 @@ export default function PayslipsPage() {
 
       {isLoading && <p className="text-sm text-black/60">Memuat...</p>}
       {error && <p className="text-sm text-red-600">{(error as Error).message}</p>}
+      {deleteMutation.isError && (
+        <p className="text-sm text-red-600 mb-2">{(deleteMutation.error as Error).message}</p>
+      )}
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm border-collapse">
@@ -31,6 +40,7 @@ export default function PayslipsPage() {
               <th className="py-2 pr-4">Karyawan</th>
               <th className="py-2 pr-4">Periode</th>
               <th className="py-2 pr-4">Total</th>
+              <th className="py-2 pr-4">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -43,11 +53,28 @@ export default function PayslipsPage() {
                 </td>
                 <td className="py-2 pr-4">{p.period}</td>
                 <td className="py-2 pr-4">{formatCurrency(p.total)}</td>
+                <td className="py-2 pr-4">
+                  <div className="flex gap-3">
+                    <Link href={`/payslips/${p.id}/edit`} className="hover:underline">
+                      Edit
+                    </Link>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Hapus slip gaji "${p.employee?.name}" periode ${p.period}?`)) {
+                          deleteMutation.mutate(p.id);
+                        }
+                      }}
+                      className="text-red-600 hover:underline"
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
             {data?.length === 0 && (
               <tr>
-                <td colSpan={3} className="py-4 text-black/50">
+                <td colSpan={4} className="py-4 text-black/50">
                   Belum ada slip gaji.
                 </td>
               </tr>

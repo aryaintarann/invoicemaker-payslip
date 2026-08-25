@@ -116,5 +116,7 @@ export const payslipsApi = {
   get: (id: number) => request<Payslip>(`/api/payslips/${id}`),
   create: (data: unknown) =>
     request<Payslip>("/api/payslips", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: number, data: unknown) =>
+    request<Payslip>(`/api/payslips/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   remove: (id: number) => request<{ ok: true }>(`/api/payslips/${id}`, { method: "DELETE" }),
 };

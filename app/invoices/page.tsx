@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { invoicesApi } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
@@ -18,10 +18,16 @@ const statusLabel: Record<string, string> = {
 
 export default function InvoicesPage() {
   const [status, setStatus] = useState<string>("");
+  const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["invoices", status],
     queryFn: () => invoicesApi.list(status || undefined),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => invoicesApi.remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoices"] }),
   });
 
   return (
@@ -51,6 +57,9 @@ export default function InvoicesPage() {
 
       {isLoading && <p className="text-sm text-black/60">Memuat...</p>}
       {error && <p className="text-sm text-red-600">{(error as Error).message}</p>}
+      {deleteMutation.isError && (
+        <p className="text-sm text-red-600 mb-2">{(deleteMutation.error as Error).message}</p>
+      )}
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm border-collapse">
@@ -62,6 +71,7 @@ export default function InvoicesPage() {
               <th className="py-2 pr-4">Jatuh Tempo</th>
               <th className="py-2 pr-4">Status</th>
               <th className="py-2 pr-4">Total</th>
+              <th className="py-2 pr-4">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -79,11 +89,32 @@ export default function InvoicesPage() {
                 <td className="py-2 pr-4">{inv.dueDate}</td>
                 <td className="py-2 pr-4">{statusLabel[inv.status]}</td>
                 <td className="py-2 pr-4">{formatCurrency(inv.total)}</td>
+                <td className="py-2 pr-4">
+                  {inv.status === "draft" ? (
+                    <div className="flex gap-3">
+                      <Link href={`/invoices/${inv.id}/edit`} className="hover:underline">
+                        Edit
+                      </Link>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Hapus invoice "${inv.invoiceNumber}"?`)) {
+                            deleteMutation.mutate(inv.id);
+                          }
+                        }}
+                        className="text-red-600 hover:underline"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-black/40">-</span>
+                  )}
+                </td>
               </tr>
             ))}
             {data?.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-4 text-black/50">
+                <td colSpan={7} className="py-4 text-black/50">
                   Belum ada invoice.
                 </td>
               </tr>
