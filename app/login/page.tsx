@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { LockKey, Warning } from "@phosphor-icons/react";
+import { Lock, Warning } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +46,7 @@ function LoginForm() {
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
           <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-            <LockKey className="size-5" weight="bold" />
+            <Lock className="size-5" weight="bold" />
           </div>
           <CardTitle className="text-xl">Masuk</CardTitle>
           <CardDescription>Aplikasi invoice dan slip gaji</CardDescription>
