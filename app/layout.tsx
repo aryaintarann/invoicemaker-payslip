@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppHeader } from "./components/AppHeader";
+import { AppMain } from "./components/AppMain";
 import { QueryProvider } from "./providers/query-provider";
 import { ThemeProvider } from "./components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -32,9 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <QueryProvider>
             <AppHeader />
-            <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
-              {children}
-            </main>
+            <AppMain>{children}</AppMain>
             <Toaster />
           </QueryProvider>
         </ThemeProvider>
