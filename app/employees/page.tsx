@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IdentificationBadge, MagnifyingGlass, Plus, Warning } from "@phosphor-icons/react";
+import { IdentificationBadge, MagnifyingGlass, PencilSimple, Plus, Warning } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 import { employeesApi } from "@/lib/api-client";
@@ -107,10 +107,21 @@ export default function EmployeesPage() {
                 <TableCell className="text-muted-foreground">{emp.position || "-"}</TableCell>
                 <TableCell className="tabular-nums">{formatCurrency(emp.baseSalary)}</TableCell>
                 <TableCell className="text-right">
-                  <DeleteConfirmButton
-                    itemLabel={`karyawan "${emp.name}"`}
-                    onConfirm={() => deleteMutation.mutate(emp.id)}
-                  />
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Edit karyawan ${emp.name}`}
+                      nativeButton={false}
+                      render={<Link href={`/employees/${emp.id}`} />}
+                    >
+                      <PencilSimple className="size-4" />
+                    </Button>
+                    <DeleteConfirmButton
+                      itemLabel={`karyawan "${emp.name}"`}
+                      onConfirm={() => deleteMutation.mutate(emp.id)}
+                    />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

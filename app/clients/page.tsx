@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MagnifyingGlass, Plus, UsersThree, Warning } from "@phosphor-icons/react";
+import { MagnifyingGlass, PencilSimple, Plus, UsersThree, Warning } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 import { clientsApi } from "@/lib/api-client";
@@ -107,10 +107,21 @@ export default function ClientsPage() {
                 <TableCell className="text-muted-foreground">{c.email || "-"}</TableCell>
                 <TableCell className="text-muted-foreground">{c.phone || "-"}</TableCell>
                 <TableCell className="text-right">
-                  <DeleteConfirmButton
-                    itemLabel={`client "${c.name}"`}
-                    onConfirm={() => deleteMutation.mutate(c.id)}
-                  />
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Edit client ${c.name}`}
+                      nativeButton={false}
+                      render={<Link href={`/clients/${c.id}`} />}
+                    >
+                      <PencilSimple className="size-4" />
+                    </Button>
+                    <DeleteConfirmButton
+                      itemLabel={`client "${c.name}"`}
+                      onConfirm={() => deleteMutation.mutate(c.id)}
+                    />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
