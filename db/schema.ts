@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+  customType,
   date,
   integer,
   numeric,
@@ -10,6 +11,21 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
+
+// drizzle-orm/neon-http has no built-in bytea type. The neon-http driver already
+// decodes bytea results into a Buffer, but accepts a "\x"-prefixed hex string on
+// the way in — so fromDriver must tolerate either shape defensively.
+const bytea = customType<{ data: Buffer; driverData: Buffer | string }>({
+  dataType() {
+    return "bytea";
+  },
+  toDriver(value) {
+    return "\\x" + value.toString("hex");
+  },
+  fromDriver(value) {
+    return Buffer.isBuffer(value) ? value : Buffer.from(value.replace(/^\\x/, ""), "hex");
+  },
+});
 
 export const invoiceStatusEnum = pgEnum("invoice_status", [
   "draft",
@@ -68,6 +84,16 @@ export const invoices = pgTable("invoices", {
   pphDeadline: date("pph_deadline", { mode: "string" }),
   total: numeric("total", { precision: 16, scale: 2 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  // Supporting tax documents, uploaded after the fact — "status" is derived from
+  // presence of *FileName, not stored separately, so it can never drift from the file.
+  taxWithholdingDocFile: bytea("tax_withholding_doc_file"),
+  taxWithholdingDocFileName: varchar("tax_withholding_doc_file_name", { length: 255 }),
+  taxWithholdingDocFileType: varchar("tax_withholding_doc_file_type", { length: 150 }),
+  taxWithholdingDocUploadedAt: timestamp("tax_withholding_doc_uploaded_at"),
+  taxInvoiceDocFile: bytea("tax_invoice_doc_file"),
+  taxInvoiceDocFileName: varchar("tax_invoice_doc_file_name", { length: 255 }),
+  taxInvoiceDocFileType: varchar("tax_invoice_doc_file_type", { length: 150 }),
+  taxInvoiceDocUploadedAt: timestamp("tax_invoice_doc_uploaded_at"),
 });
 
 // Reserved for a future phase (auto/manual follow-up emails) — not populated yet.

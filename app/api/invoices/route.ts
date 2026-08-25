@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
       : undefined,
     with: { client: true },
     orderBy: (t, { desc }) => desc(t.createdAt),
+    columns: { taxWithholdingDocFile: false, taxInvoiceDocFile: false },
   });
   return NextResponse.json(rows);
 }
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest) {
   const full = await db.query.invoices.findFirst({
     where: (t, { eq }) => eq(t.id, invoice.id),
     with: { client: true },
+    columns: { taxWithholdingDocFile: false, taxInvoiceDocFile: false },
   });
 
   return NextResponse.json(full, { status: 201 });

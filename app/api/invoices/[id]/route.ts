@@ -36,6 +36,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const row = await db.query.invoices.findFirst({
     where: eq(invoices.id, Number(id)),
     with: { client: true },
+    columns: { taxWithholdingDocFile: false, taxInvoiceDocFile: false },
   });
   if (!row) return NextResponse.json({ error: "Invoice tidak ditemukan" }, { status: 404 });
   return NextResponse.json(row);
@@ -63,12 +64,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         { status: 409 }
       );
     }
-    const [row] = await db
-      .update(invoices)
-      .set({ status: "paid" })
-      .where(eq(invoices.id, invoiceId))
-      .returning();
-    return NextResponse.json(row);
+    await db.update(invoices).set({ status: "paid" }).where(eq(invoices.id, invoiceId));
+    const full = await db.query.invoices.findFirst({
+      where: eq(invoices.id, invoiceId),
+      with: { client: true },
+      columns: { taxWithholdingDocFile: false, taxInvoiceDocFile: false },
+    });
+    return NextResponse.json(full);
   }
 
   const needsRecompute =
@@ -123,6 +125,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const full = await db.query.invoices.findFirst({
     where: eq(invoices.id, row.id),
     with: { client: true },
+    columns: { taxWithholdingDocFile: false, taxInvoiceDocFile: false },
   });
   return NextResponse.json(full);
 }

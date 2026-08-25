@@ -52,7 +52,15 @@ export type Invoice = {
   total: string;
   createdAt: string;
   client?: Client;
+  taxWithholdingDocFileName: string | null;
+  taxWithholdingDocFileType: string | null;
+  taxWithholdingDocUploadedAt: string | null;
+  taxInvoiceDocFileName: string | null;
+  taxInvoiceDocFileType: string | null;
+  taxInvoiceDocUploadedAt: string | null;
 };
+
+export type InvoiceDocumentType = "tax-withholding" | "tax-invoice";
 
 export type Payslip = {
   id: number;
@@ -103,6 +111,21 @@ export const invoicesApi = {
       body: JSON.stringify({ status: "paid" }),
     }),
   remove: (id: number) => request<{ ok: true }>(`/api/invoices/${id}`, { method: "DELETE" }),
+  uploadDocument: async (id: number, type: InvoiceDocumentType, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`/api/invoices/${id}/documents/${type}`, {
+      method: "POST",
+      body: form,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `Upload gagal (${res.status})`);
+    }
+    return res.json();
+  },
+  removeDocument: (id: number, type: InvoiceDocumentType) =>
+    request<{ ok: true }>(`/api/invoices/${id}/documents/${type}`, { method: "DELETE" }),
 };
 
 export const payslipsApi = {
