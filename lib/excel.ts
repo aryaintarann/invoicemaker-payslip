@@ -63,7 +63,8 @@ export async function fillPayslipTemplate(data: PayslipTemplateData): Promise<Bu
   const biayaBpjs = Number(data.biayaBpjs);
   const biayaBpjsJht = Number(data.biayaBpjsJht);
   const totalPendapatan = gajiPokok + transportTotal + biayaBpjs;
-  const tanggal = `Badung, ${formatDate(data.issueDate)}`;
+  const tanggal = formatDate(data.issueDate);
+  const tanggalTtd = `Badung, ${tanggal}`;
 
   const content = fs.readFileSync(TEMPLATE_PATH, "binary");
   const zip = new PizZip(content);
@@ -78,7 +79,7 @@ export async function fillPayslipTemplate(data: PayslipTemplateData): Promise<Bu
   xml = setCell(xml, "C12", formatCurrency(totalPendapatan));
   xml = setCell(xml, "C14", formatCurrency(biayaBpjsJht));
   xml = setCell(xml, "C16", formatCurrency(Number(data.total)));
-  xml = setCell(xml, "F17", tanggal);
+  xml = setCell(xml, "F17", tanggalTtd);
   xml = setCell(xml, "F21", data.employeeName);
 
   zip.file(SHEET_PATH, xml);
