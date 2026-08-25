@@ -25,12 +25,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       total: payslip.total,
     });
 
-    return new NextResponse(new Blob([new Uint8Array(buffer)]), {
+    const safeName = `${payslip.employee.name}-${payslip.period}`.replace(/[^a-zA-Z0-9._-]/g, "_");
+    return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="slip-gaji-${payslip.employee.name}-${payslip.period}.xlsx"`,
+        "Content-Disposition": `attachment; filename="slip-gaji-${safeName}.xlsx"`,
+        "Content-Length": String(buffer.byteLength),
       },
     });
   } catch (error) {

@@ -36,12 +36,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       total: invoice.total,
     });
 
-    return new NextResponse(new Blob([new Uint8Array(buffer)]), {
+    const safeName = invoice.invoiceNumber.replace(/[^a-zA-Z0-9._-]/g, "_");
+    return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "Content-Disposition": `attachment; filename="invoice-${invoice.invoiceNumber}.docx"`,
+        "Content-Disposition": `attachment; filename="invoice-${safeName}.docx"`,
+        "Content-Length": String(buffer.byteLength),
       },
     });
   } catch (error) {
