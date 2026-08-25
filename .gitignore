@@ -47,7 +47,7 @@ next-env.d.ts
 # user-supplied templates contain real business data (bank accounts, client
 # names, contact info) - keep local only, never on GitHub. Docs (READMEs)
 # stay tracked.
-templates/invoice/**/*.docx
-templates/invoice/**/*.doc
-templates/slip-gaji/**/*.xlsx
-templates/slip-gaji/**/*.json
+# templates/invoice/**/*.docx
+# templates/invoice/**/*.doc
+# templates/slip-gaji/**/*.xlsx
+# templates/slip-gaji/**/*.json
