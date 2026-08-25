@@ -1,11 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import ExcelJS from "exceljs";
+import PizZip from "pizzip";
 
 import { formatCurrency, formatDate } from "./format";
 
 const TEMPLATE_PATH = path.join(process.cwd(), "templates/slip-gaji/template.xlsx");
+const SHEET_PATH = "xl/worksheets/sheet1.xml";
 
 export type PayslipTemplateData = {
   employeeName: string;
@@ -20,6 +21,30 @@ export type PayslipTemplateData = {
 
 export class TemplateMissingError extends Error {}
 
+function escapeXml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// Replaces a single <c r="REF" .../> or <c r="REF" ...>...</c> cell element
+// with fresh content, keeping its existing style (s="N") attribute and
+// leaving every other part of the workbook (styles, drawings, images)
+// untouched. ExcelJS's read+write roundtrip silently drops text-box shapes
+// (e.g. the letterhead contact info box), so we edit the sheet XML directly
+// instead of loading the workbook into ExcelJS.
+function setCell(xml: string, ref: string, value: string | number): string {
+  const re = new RegExp(`<c r="${ref}"([^>]*?)(?:/>|>[\\s\\S]*?</c>)`);
+  const match = xml.match(re);
+  if (!match) {
+    throw new Error(`Cell ${ref} not found in ${SHEET_PATH}`);
+  }
+  const attrs = match[1].replace(/\st="[^"]*"/, "");
+  const newCell =
+    typeof value === "number"
+      ? `<c r="${ref}"${attrs}><v>${value}</v></c>`
+      : `<c r="${ref}"${attrs} t="inlineStr"><is><t xml:space="preserve">${escapeXml(value)}</t></is></c>`;
+  return xml.slice(0, match.index) + newCell + xml.slice(match.index! + match[0].length);
+}
+
 /**
  * Fills templates/slip-gaji/template.xlsx (user-supplied, see
  * templates/slip-gaji/README.md for the exact cell layout it expects) and
@@ -33,30 +58,29 @@ export async function fillPayslipTemplate(data: PayslipTemplateData): Promise<Bu
     );
   }
 
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.readFile(TEMPLATE_PATH);
-  const ws = workbook.getWorksheet("Sheet1") ?? workbook.worksheets[0];
-
   const gajiPokok = Number(data.gajiPokok);
   const transportTotal = Number(data.uangTransportMakanPerHari) * data.jumlahHariKerja;
   const biayaBpjs = Number(data.biayaBpjs);
   const biayaBpjsJht = Number(data.biayaBpjsJht);
   const totalPendapatan = gajiPokok + transportTotal + biayaBpjs;
-
   const tanggal = `Badung, ${formatDate(data.issueDate)}`;
 
-  ws.getCell("A3").value = tanggal;
-  ws.getCell("C5").value = data.employeeName;
-  ws.getCell("C6").value = data.jumlahHariKerja;
-  ws.getCell("C9").value = formatCurrency(gajiPokok);
-  ws.getCell("C10").value = formatCurrency(transportTotal);
-  ws.getCell("C11").value = formatCurrency(biayaBpjs);
-  ws.getCell("C12").value = formatCurrency(totalPendapatan);
-  ws.getCell("C14").value = formatCurrency(biayaBpjsJht);
-  ws.getCell("C16").value = formatCurrency(Number(data.total));
-  // F17:G17 and F21:G21 are merged — only the anchor (top-left) cell is writable.
-  ws.getCell("F17").value = tanggal;
-  ws.getCell("F21").value = data.employeeName;
+  const content = fs.readFileSync(TEMPLATE_PATH, "binary");
+  const zip = new PizZip(content);
+  let xml = zip.file(SHEET_PATH)!.asText();
 
-  return Buffer.from(await workbook.xlsx.writeBuffer());
+  xml = setCell(xml, "A3", tanggal);
+  xml = setCell(xml, "C5", data.employeeName);
+  xml = setCell(xml, "C6", data.jumlahHariKerja);
+  xml = setCell(xml, "C9", formatCurrency(gajiPokok));
+  xml = setCell(xml, "C10", formatCurrency(transportTotal));
+  xml = setCell(xml, "C11", formatCurrency(biayaBpjs));
+  xml = setCell(xml, "C12", formatCurrency(totalPendapatan));
+  xml = setCell(xml, "C14", formatCurrency(biayaBpjsJht));
+  xml = setCell(xml, "C16", formatCurrency(Number(data.total)));
+  xml = setCell(xml, "F17", tanggal);
+  xml = setCell(xml, "F21", data.employeeName);
+
+  zip.file(SHEET_PATH, xml);
+  return zip.generate({ type: "nodebuffer" });
 }
