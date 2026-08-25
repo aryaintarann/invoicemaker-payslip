@@ -48,7 +48,7 @@ function LoginForm() {
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-muted/30 px-4">
       <Card className="w-full max-w-sm gap-6 p-6 shadow-none">
-        <CardHeader className="items-center gap-2 p-0 text-center">
+        <CardHeader className="items-center justify-items-center gap-2 p-0 text-center">
           <div className="relative flex size-16 shrink-0 items-center justify-center rounded-full before:absolute before:inset-0 before:rounded-full before:bg-gradient-to-b before:from-primary/20 before:to-transparent">
             <div className="relative z-10 flex size-12 items-center justify-center rounded-full bg-background ring-1 ring-inset ring-border">
               <User className="size-6 text-muted-foreground" weight="bold" />
