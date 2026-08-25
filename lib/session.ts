@@ -9,11 +9,15 @@ function sign(payload: string): string {
   return createHmac("sha256", secret).update(payload).digest("base64url");
 }
 
-/** Builds a signed "<expiry>.<signature>" session token. */
-export function createSessionToken(): { value: string; maxAge: number } {
+/**
+ * Builds a signed "<expiry>.<signature>" session token.
+ * `remember` controls the cookie's maxAge: omitted, the browser treats it as
+ * a session cookie and drops it on close; set, it persists for 30 days.
+ */
+export function createSessionToken(remember: boolean): { value: string; maxAge: number | undefined } {
   const expiry = Date.now() + SESSION_MAX_AGE_SECONDS * 1000;
   const payload = String(expiry);
-  return { value: `${payload}.${sign(payload)}`, maxAge: SESSION_MAX_AGE_SECONDS };
+  return { value: `${payload}.${sign(payload)}`, maxAge: remember ? SESSION_MAX_AGE_SECONDS : undefined };
 }
 
 /** Verifies a session token's signature and expiry. */
