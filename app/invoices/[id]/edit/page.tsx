@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Invoice, invoicesApi } from "@/lib/api-client";
+import { invoiceHasTax } from "@/lib/invoice-tax";
 import { InvoiceForm, InvoiceFormValues } from "../../InvoiceForm";
 
 function toFormValues(invoice: Invoice): InvoiceFormValues {
@@ -13,6 +14,7 @@ function toFormValues(invoice: Invoice): InvoiceFormValues {
     invoiceNumber: invoice.invoiceNumber,
     entity: invoice.entity,
     kind: invoice.kind,
+    language: invoice.language,
     invoiceLabel: invoice.invoiceLabel,
     clientAttn: invoice.clientAttn ?? "",
     projectName: invoice.projectName,
@@ -33,16 +35,18 @@ function EditForm({ invoice }: { invoice: Invoice }) {
   const [form, setForm] = useState<InvoiceFormValues>(() => toFormValues(invoice));
 
   const mutation = useMutation({
-    mutationFn: () =>
-      invoicesApi.update(invoice.id, {
+    mutationFn: () => {
+      const hasTax = invoiceHasTax(form.entity, form.kind, form.language);
+      return invoicesApi.update(invoice.id, {
         ...form,
         clientId: Number(form.clientId),
         contractValue: Number(form.contractValue),
         invoicePercent: Number(form.invoicePercent),
-        ppnPercent: form.entity === "cv" ? Number(form.ppnPercent) : undefined,
-        pphPercent: form.entity === "cv" ? Number(form.pphPercent) : undefined,
-        pphDeadline: form.entity === "cv" ? form.pphDeadline || undefined : undefined,
-      }),
+        ppnPercent: hasTax ? Number(form.ppnPercent) : undefined,
+        pphPercent: hasTax ? Number(form.pphPercent) : undefined,
+        pphDeadline: hasTax ? form.pphDeadline || undefined : undefined,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       router.push(`/invoices/${invoice.id}`);

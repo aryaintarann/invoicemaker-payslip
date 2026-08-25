@@ -3,24 +3,27 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { db } from "@/db";
 import { invoices } from "@/db/schema";
+import { defaultPpnPercent, DEFAULT_PPH_PERCENT, invoiceHasTax } from "@/lib/invoice-tax";
 import { invoiceUpdateInput } from "@/lib/validators";
 
 function computeAmounts(input: {
   contractValue: number;
   invoicePercent: number;
   entity: "cv" | "op";
+  kind: "dp" | "final";
+  language: "id" | "en";
   ppnPercent?: number;
   pphPercent?: number;
 }) {
   const billedAmount = (input.contractValue * input.invoicePercent) / 100;
   const remainingAmount = input.contractValue - billedAmount;
 
-  if (input.entity !== "cv") {
+  if (!invoiceHasTax(input.entity, input.kind, input.language)) {
     return { billedAmount, remainingAmount, ppnAmount: null, pphAmount: null, total: billedAmount };
   }
 
-  const ppnPercent = input.ppnPercent ?? 11;
-  const pphPercent = input.pphPercent ?? 6;
+  const ppnPercent = input.ppnPercent ?? defaultPpnPercent(input.kind, input.language);
+  const pphPercent = input.pphPercent ?? DEFAULT_PPH_PERCENT;
   const ppnAmount = (billedAmount * ppnPercent) / 100;
   const pphAmount = (billedAmount * pphPercent) / 100;
   const total = billedAmount + ppnAmount - pphAmount;
@@ -72,26 +75,35 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     contractValue !== undefined ||
     invoicePercent !== undefined ||
     rest.entity !== undefined ||
+    rest.kind !== undefined ||
+    rest.language !== undefined ||
     ppnPercent !== undefined ||
     pphPercent !== undefined;
 
   let computed: Record<string, string | null> = {};
   if (needsRecompute) {
     const entity = rest.entity ?? existing.entity;
+    const kind = rest.kind ?? existing.kind;
+    const language = rest.language ?? existing.language;
     const amounts = computeAmounts({
       contractValue: contractValue ?? Number(existing.contractValue),
       invoicePercent: invoicePercent ?? Number(existing.invoicePercent),
       entity,
+      kind,
+      language,
       ppnPercent: ppnPercent ?? (existing.ppnPercent ? Number(existing.ppnPercent) : undefined),
       pphPercent: pphPercent ?? (existing.pphPercent ? Number(existing.pphPercent) : undefined),
     });
+    const hasTax = invoiceHasTax(entity, kind, language);
     computed = {
       contractValue: String(contractValue ?? existing.contractValue),
       invoicePercent: String(invoicePercent ?? existing.invoicePercent),
       billedAmount: String(amounts.billedAmount),
       remainingAmount: String(amounts.remainingAmount),
-      ppnPercent: entity === "cv" ? String(ppnPercent ?? existing.ppnPercent ?? 11) : null,
-      pphPercent: entity === "cv" ? String(pphPercent ?? existing.pphPercent ?? 6) : null,
+      ppnPercent: hasTax
+        ? String(ppnPercent ?? existing.ppnPercent ?? defaultPpnPercent(kind, language))
+        : null,
+      pphPercent: hasTax ? String(pphPercent ?? existing.pphPercent ?? DEFAULT_PPH_PERCENT) : null,
       ppnAmount: amounts.ppnAmount != null ? String(amounts.ppnAmount) : null,
       pphAmount: amounts.pphAmount != null ? String(amounts.pphAmount) : null,
       total: String(amounts.total),

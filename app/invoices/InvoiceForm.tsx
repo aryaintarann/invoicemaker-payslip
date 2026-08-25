@@ -4,12 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { clientsApi } from "@/lib/api-client";
+import { invoiceHasTax } from "@/lib/invoice-tax";
 
 export type InvoiceFormValues = {
   clientId: string;
   invoiceNumber: string;
   entity: "cv" | "op";
   kind: "dp" | "final";
+  language: "id" | "en";
   invoiceLabel: string;
   clientAttn: string;
   projectName: string;
@@ -28,6 +30,7 @@ export const emptyInvoiceForm: InvoiceFormValues = {
   invoiceNumber: "",
   entity: "op",
   kind: "final",
+  language: "id",
   invoiceLabel: "Final",
   clientAttn: "",
   projectName: "",
@@ -63,18 +66,20 @@ export function InvoiceForm({
 }) {
   const { data: clients } = useQuery({ queryKey: ["clients"], queryFn: clientsApi.list });
 
+  const hasTax = invoiceHasTax(form.entity, form.kind, form.language);
+
   const preview = useMemo(() => {
     const contractValue = Number(form.contractValue || 0);
     const percent = Number(form.invoicePercent || 0);
     const billed = (contractValue * percent) / 100;
     const remaining = contractValue - billed;
-    if (form.entity === "op") {
+    if (!hasTax) {
       return { billed, remaining, ppn: 0, pph: 0, total: billed };
     }
     const ppn = (billed * Number(form.ppnPercent || 0)) / 100;
     const pph = (billed * Number(form.pphPercent || 0)) / 100;
     return { billed, remaining, ppn, pph, total: billed + ppn - pph };
-  }, [form]);
+  }, [form, hasTax]);
 
   return (
     <form
@@ -110,7 +115,7 @@ export function InvoiceForm({
         />
       </label>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <label className="flex flex-col gap-1 text-sm">
           Entity
           <select
@@ -136,7 +141,23 @@ export function InvoiceForm({
             <option value="final">Final</option>
           </select>
         </label>
+        <label className="flex flex-col gap-1 text-sm">
+          Bahasa
+          <select
+            className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
+            value={form.language}
+            onChange={(e) => setForm({ ...form, language: e.target.value as "id" | "en" })}
+          >
+            <option value="id">Indonesia</option>
+            <option value="en">Inggris</option>
+          </select>
+        </label>
       </div>
+      {form.entity === "op" && form.kind === "final" && form.language === "en" && (
+        <p className="text-xs text-black/50 -mt-2">
+          Catatan: template OP Final versi Inggris tetap menyertakan PPN/PPh, berbeda dari OP lainnya.
+        </p>
+      )}
 
       <label className="flex flex-col gap-1 text-sm">
         Label Invoice (teks yang tercetak, mis. &quot;1st DP&quot;, &quot;50% DP (Down Payment)&quot;, &quot;Final&quot;)
@@ -235,7 +256,7 @@ export function InvoiceForm({
         </label>
       </div>
 
-      {form.entity === "cv" && (
+      {hasTax && (
         <div className="grid grid-cols-3 gap-4">
           <label className="flex flex-col gap-1 text-sm">
             PPN (%)
@@ -280,7 +301,7 @@ export function InvoiceForm({
           <span>Sisa</span>
           <span>{preview.remaining.toLocaleString("id-ID")}</span>
         </div>
-        {form.entity === "cv" && (
+        {hasTax && (
           <>
             <div className="flex justify-between">
               <span>PPN</span>

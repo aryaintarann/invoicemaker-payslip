@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { invoicesApi } from "@/lib/api-client";
+import { invoiceHasTax } from "@/lib/invoice-tax";
 import { emptyInvoiceForm, InvoiceForm, InvoiceFormValues } from "../InvoiceForm";
 
 export default function NewInvoicePage() {
@@ -13,15 +14,17 @@ export default function NewInvoicePage() {
   const [form, setForm] = useState<InvoiceFormValues>(emptyInvoiceForm);
 
   const mutation = useMutation({
-    mutationFn: () =>
-      invoicesApi.create({
+    mutationFn: () => {
+      const hasTax = invoiceHasTax(form.entity, form.kind, form.language);
+      return invoicesApi.create({
         ...form,
         contractValue: Number(form.contractValue),
         invoicePercent: Number(form.invoicePercent),
-        ppnPercent: form.entity === "cv" ? Number(form.ppnPercent) : undefined,
-        pphPercent: form.entity === "cv" ? Number(form.pphPercent) : undefined,
-        pphDeadline: form.entity === "cv" ? form.pphDeadline || undefined : undefined,
-      }),
+        ppnPercent: hasTax ? Number(form.ppnPercent) : undefined,
+        pphPercent: hasTax ? Number(form.pphPercent) : undefined,
+        pphDeadline: hasTax ? form.pphDeadline || undefined : undefined,
+      });
+    },
     onSuccess: (invoice) => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       router.push(`/invoices/${invoice.id}`);

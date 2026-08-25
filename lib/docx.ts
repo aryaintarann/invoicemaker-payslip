@@ -62,7 +62,7 @@ export async function fillInvoiceTemplate(data: InvoiceTemplateData): Promise<Bu
     invoice_number: data.invoiceNumber,
     invoice_label: data.invoiceLabel,
     project_name: data.projectName,
-    issue_date: formatDate(data.issueDate),
+    issue_date: formatDate(data.issueDate, data.language),
     client_name: data.client.name,
     client_attn: data.clientAttn ?? "",
     invoice_percent: formatPercent(data.invoicePercent),
@@ -73,9 +73,9 @@ export async function fillInvoiceTemplate(data: InvoiceTemplateData): Promise<Bu
     pph_percent: data.pphPercent != null ? formatPercent(data.pphPercent) : "",
     ppn_amount: data.ppnAmount != null ? formatAmount(data.ppnAmount) : "",
     pph_amount: data.pphAmount != null ? formatAmount(data.pphAmount) : "",
-    pph_deadline: data.pphDeadline ? formatDate(data.pphDeadline) : "",
+    pph_deadline: data.pphDeadline ? formatDate(data.pphDeadline, data.language) : "",
     total_billed: formatAmount(data.total),
-    terbilang: terbilang(data.total),
+    terbilang: terbilang(data.total, data.language),
   };
 
   try {

@@ -2,24 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { db } from "@/db";
 import { invoices } from "@/db/schema";
+import { defaultPpnPercent, DEFAULT_PPH_PERCENT, invoiceHasTax } from "@/lib/invoice-tax";
 import { invoiceInput } from "@/lib/validators";
 
 function computeAmounts(input: {
   contractValue: number;
   invoicePercent: number;
   entity: "cv" | "op";
+  kind: "dp" | "final";
+  language: "id" | "en";
   ppnPercent?: number;
   pphPercent?: number;
 }) {
   const billedAmount = (input.contractValue * input.invoicePercent) / 100;
   const remainingAmount = input.contractValue - billedAmount;
 
-  if (input.entity !== "cv") {
+  if (!invoiceHasTax(input.entity, input.kind, input.language)) {
     return { billedAmount, remainingAmount, ppnAmount: null, pphAmount: null, total: billedAmount };
   }
 
-  const ppnPercent = input.ppnPercent ?? 11;
-  const pphPercent = input.pphPercent ?? 6;
+  const ppnPercent = input.ppnPercent ?? defaultPpnPercent(input.kind, input.language);
+  const pphPercent = input.pphPercent ?? DEFAULT_PPH_PERCENT;
   const ppnAmount = (billedAmount * ppnPercent) / 100;
   const pphAmount = (billedAmount * pphPercent) / 100;
   const total = billedAmount + ppnAmount - pphAmount;
@@ -48,10 +51,13 @@ export async function POST(req: NextRequest) {
   }
 
   const { ppnPercent, pphPercent, ...rest } = parsed.data;
+  const hasTax = invoiceHasTax(rest.entity, rest.kind, rest.language);
   const amounts = computeAmounts({
     contractValue: rest.contractValue,
     invoicePercent: rest.invoicePercent,
     entity: rest.entity,
+    kind: rest.kind,
+    language: rest.language,
     ppnPercent,
     pphPercent,
   });
@@ -65,8 +71,8 @@ export async function POST(req: NextRequest) {
       invoicePercent: String(rest.invoicePercent),
       billedAmount: String(amounts.billedAmount),
       remainingAmount: String(amounts.remainingAmount),
-      ppnPercent: rest.entity === "cv" ? String(ppnPercent ?? 11) : null,
-      pphPercent: rest.entity === "cv" ? String(pphPercent ?? 6) : null,
+      ppnPercent: hasTax ? String(ppnPercent ?? defaultPpnPercent(rest.kind, rest.language)) : null,
+      pphPercent: hasTax ? String(pphPercent ?? DEFAULT_PPH_PERCENT) : null,
       ppnAmount: amounts.ppnAmount != null ? String(amounts.ppnAmount) : null,
       pphAmount: amounts.pphAmount != null ? String(amounts.pphAmount) : null,
       total: String(amounts.total),
