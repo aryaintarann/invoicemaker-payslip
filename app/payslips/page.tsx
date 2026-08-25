@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Money, PencilSimple, Plus, Warning } from "@phosphor-icons/react";
+import { MagnifyingGlass, Money, PencilSimple, Plus, Warning } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 import { payslipsApi } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -21,10 +23,20 @@ import { PageHeader } from "../components/PageHeader";
 import { DeleteConfirmButton } from "../components/DeleteConfirmButton";
 
 export default function PayslipsPage() {
+  const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
     queryKey: ["payslips"],
     queryFn: () => payslipsApi.list(),
+  });
+
+  const filtered = data?.filter((p) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (p.employee?.name || "").toLowerCase().includes(q) ||
+      p.period.toLowerCase().includes(q)
+    );
   });
 
   const deleteMutation = useMutation({
@@ -48,6 +60,16 @@ export default function PayslipsPage() {
           </Button>
         }
       />
+
+      <div className="relative mb-4 max-w-sm">
+        <MagnifyingGlass className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Cari nama karyawan atau periode..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-8"
+        />
+      </div>
 
       {error && (
         <p className="mb-4 flex items-center gap-1.5 text-sm text-destructive">
@@ -75,7 +97,7 @@ export default function PayslipsPage() {
                   </TableCell>
                 </TableRow>
               ))}
-            {data?.map((p) => (
+            {filtered?.map((p) => (
               <TableRow key={p.id}>
                 <TableCell className="font-medium">
                   <Link href={`/payslips/${p.id}`} className="hover:text-primary hover:underline">
@@ -103,12 +125,14 @@ export default function PayslipsPage() {
                 </TableCell>
               </TableRow>
             ))}
-            {data?.length === 0 && (
+            {filtered?.length === 0 && (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={4} className="py-12 text-center">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <Money className="size-8" />
-                    <p className="text-sm">Belum ada slip gaji.</p>
+                    <p className="text-sm">
+                      {search ? "Tidak ada slip gaji yang cocok." : "Belum ada slip gaji."}
+                    </p>
                   </div>
                 </TableCell>
               </TableRow>

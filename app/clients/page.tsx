@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, UsersThree, Warning } from "@phosphor-icons/react";
+import { MagnifyingGlass, Plus, UsersThree, Warning } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 import { clientsApi } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -20,10 +22,21 @@ import { PageHeader } from "../components/PageHeader";
 import { DeleteConfirmButton } from "../components/DeleteConfirmButton";
 
 export default function ClientsPage() {
+  const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
     queryKey: ["clients"],
     queryFn: clientsApi.list,
+  });
+
+  const filtered = data?.filter((c) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      c.name.toLowerCase().includes(q) ||
+      (c.email || "").toLowerCase().includes(q) ||
+      (c.phone || "").toLowerCase().includes(q)
+    );
   });
 
   const deleteMutation = useMutation({
@@ -47,6 +60,16 @@ export default function ClientsPage() {
           </Button>
         }
       />
+
+      <div className="relative mb-4 max-w-sm">
+        <MagnifyingGlass className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Cari nama, email, atau telepon..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-8"
+        />
+      </div>
 
       {error && (
         <p className="mb-4 flex items-center gap-1.5 text-sm text-destructive">
@@ -74,7 +97,7 @@ export default function ClientsPage() {
                   </TableCell>
                 </TableRow>
               ))}
-            {data?.map((c) => (
+            {filtered?.map((c) => (
               <TableRow key={c.id}>
                 <TableCell className="font-medium">
                   <Link href={`/clients/${c.id}`} className="hover:text-primary hover:underline">
@@ -91,12 +114,16 @@ export default function ClientsPage() {
                 </TableCell>
               </TableRow>
             ))}
-            {data?.length === 0 && (
+            {filtered?.length === 0 && (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={4} className="py-12 text-center">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <UsersThree className="size-8" />
-                    <p className="text-sm">Belum ada client. Tambahkan client pertama Anda.</p>
+                    <p className="text-sm">
+                      {search
+                        ? "Tidak ada client yang cocok."
+                        : "Belum ada client. Tambahkan client pertama Anda."}
+                    </p>
                   </div>
                 </TableCell>
               </TableRow>

@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, PencilSimple, Plus, Warning } from "@phosphor-icons/react";
+import { FileText, MagnifyingGlass, PencilSimple, Plus, Warning } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 import { invoicesApi } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
@@ -34,11 +35,22 @@ const statusLabel: Record<string, string> = {
 
 export default function InvoicesPage() {
   const [status, setStatus] = useState<string>("");
+  const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["invoices", status],
     queryFn: () => invoicesApi.list(status || undefined),
+  });
+
+  const filtered = data?.filter((inv) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      inv.invoiceNumber.toLowerCase().includes(q) ||
+      (inv.client?.name || "").toLowerCase().includes(q) ||
+      inv.projectName.toLowerCase().includes(q)
+    );
   });
 
   const deleteMutation = useMutation({
@@ -80,6 +92,16 @@ export default function InvoicesPage() {
         ))}
       </div>
 
+      <div className="relative mb-4 max-w-sm">
+        <MagnifyingGlass className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Cari no. invoice, client, atau proyek..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-8"
+        />
+      </div>
+
       {error && (
         <p className="mb-4 flex items-center gap-1.5 text-sm text-destructive">
           <Warning className="size-4 shrink-0" />
@@ -109,7 +131,7 @@ export default function InvoicesPage() {
                   </TableCell>
                 </TableRow>
               ))}
-            {data?.map((inv) => (
+            {filtered?.map((inv) => (
               <TableRow key={inv.id}>
                 <TableCell className="font-medium">
                   <Link href={`/invoices/${inv.id}`} className="hover:text-primary hover:underline">
@@ -144,12 +166,14 @@ export default function InvoicesPage() {
                 </TableCell>
               </TableRow>
             ))}
-            {data?.length === 0 && (
+            {filtered?.length === 0 && (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={7} className="py-12 text-center">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <FileText className="size-8" />
-                    <p className="text-sm">Belum ada invoice.</p>
+                    <p className="text-sm">
+                      {search ? "Tidak ada invoice yang cocok." : "Belum ada invoice."}
+                    </p>
                   </div>
                 </TableCell>
               </TableRow>

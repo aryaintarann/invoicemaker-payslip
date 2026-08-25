@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IdentificationBadge, Plus, Warning } from "@phosphor-icons/react";
+import { IdentificationBadge, MagnifyingGlass, Plus, Warning } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 import { employeesApi } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -21,10 +23,20 @@ import { PageHeader } from "../components/PageHeader";
 import { DeleteConfirmButton } from "../components/DeleteConfirmButton";
 
 export default function EmployeesPage() {
+  const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
     queryKey: ["employees"],
     queryFn: employeesApi.list,
+  });
+
+  const filtered = data?.filter((emp) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      emp.name.toLowerCase().includes(q) ||
+      (emp.position || "").toLowerCase().includes(q)
+    );
   });
 
   const deleteMutation = useMutation({
@@ -48,6 +60,16 @@ export default function EmployeesPage() {
           </Button>
         }
       />
+
+      <div className="relative mb-4 max-w-sm">
+        <MagnifyingGlass className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Cari nama atau posisi..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-8"
+        />
+      </div>
 
       {error && (
         <p className="mb-4 flex items-center gap-1.5 text-sm text-destructive">
@@ -75,7 +97,7 @@ export default function EmployeesPage() {
                   </TableCell>
                 </TableRow>
               ))}
-            {data?.map((emp) => (
+            {filtered?.map((emp) => (
               <TableRow key={emp.id}>
                 <TableCell className="font-medium">
                   <Link href={`/employees/${emp.id}`} className="hover:text-primary hover:underline">
@@ -92,12 +114,16 @@ export default function EmployeesPage() {
                 </TableCell>
               </TableRow>
             ))}
-            {data?.length === 0 && (
+            {filtered?.length === 0 && (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={4} className="py-12 text-center">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <IdentificationBadge className="size-8" />
-                    <p className="text-sm">Belum ada karyawan. Tambahkan karyawan pertama Anda.</p>
+                    <p className="text-sm">
+                      {search
+                        ? "Tidak ada karyawan yang cocok."
+                        : "Belum ada karyawan. Tambahkan karyawan pertama Anda."}
+                    </p>
                   </div>
                 </TableCell>
               </TableRow>
