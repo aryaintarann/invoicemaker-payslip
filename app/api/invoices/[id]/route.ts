@@ -68,14 +68,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json(row);
   }
 
-  // Any other edit (fields/status change) is only allowed while draft.
-  if (existing.status !== "draft") {
-    return NextResponse.json(
-      { error: "Invoice hanya bisa diedit selagi berstatus draft" },
-      { status: 409 }
-    );
-  }
-
   const needsRecompute =
     contractValue !== undefined ||
     invoicePercent !== undefined ||
@@ -110,6 +102,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .update(invoices)
     .set({
       ...rest,
+      ...(status !== undefined ? { status } : {}),
       ...computed,
     })
     .where(eq(invoices.id, invoiceId))
@@ -128,12 +121,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const existing = await db.query.invoices.findFirst({ where: eq(invoices.id, invoiceId) });
   if (!existing) return NextResponse.json({ error: "Invoice tidak ditemukan" }, { status: 404 });
-  if (existing.status !== "draft") {
-    return NextResponse.json(
-      { error: "Hanya invoice berstatus draft yang bisa dihapus" },
-      { status: 409 }
-    );
-  }
 
   await db.delete(invoices).where(eq(invoices.id, invoiceId));
   return NextResponse.json({ ok: true });

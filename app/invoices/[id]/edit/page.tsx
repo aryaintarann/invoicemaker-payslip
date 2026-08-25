@@ -18,7 +18,7 @@ function toFormValues(invoice: Invoice): InvoiceFormValues {
     projectName: invoice.projectName,
     issueDate: invoice.issueDate,
     dueDate: invoice.dueDate,
-    status: invoice.status === "sent" ? "sent" : "draft",
+    status: invoice.status,
     contractValue: invoice.contractValue,
     invoicePercent: invoice.invoicePercent,
     ppnPercent: invoice.ppnPercent ?? "11",
@@ -75,8 +75,6 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
       <h1 className="text-2xl font-semibold mb-6">Edit Invoice</h1>
       {!data ? (
         <p className="text-sm text-black/60">Memuat...</p>
-      ) : data.status !== "draft" ? (
-        <p className="text-sm text-red-600">Invoice hanya bisa diedit selagi berstatus draft.</p>
       ) : (
         <EditForm key={data.id} invoice={data} />
       )}

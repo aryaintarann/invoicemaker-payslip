@@ -90,25 +90,21 @@ export default function InvoicesPage() {
                 <td className="py-2 pr-4">{statusLabel[inv.status]}</td>
                 <td className="py-2 pr-4">{formatCurrency(inv.total)}</td>
                 <td className="py-2 pr-4">
-                  {inv.status === "draft" ? (
-                    <div className="flex gap-3">
-                      <Link href={`/invoices/${inv.id}/edit`} className="hover:underline">
-                        Edit
-                      </Link>
-                      <button
-                        onClick={() => {
-                          if (confirm(`Hapus invoice "${inv.invoiceNumber}"?`)) {
-                            deleteMutation.mutate(inv.id);
-                          }
-                        }}
-                        className="text-red-600 hover:underline"
-                      >
-                        Hapus
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="text-black/40">-</span>
-                  )}
+                  <div className="flex gap-3">
+                    <Link href={`/invoices/${inv.id}/edit`} className="hover:underline">
+                      Edit
+                    </Link>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Hapus invoice "${inv.invoiceNumber}"?`)) {
+                          deleteMutation.mutate(inv.id);
+                        }
+                      }}
+                      className="text-red-600 hover:underline"
+                    >
+                      Hapus
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

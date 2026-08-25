@@ -45,7 +45,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   if (!data) return <p className="text-sm text-black/60">Memuat...</p>;
 
   const canMarkPaid = data.status === "sent" || data.status === "overdue";
-  const isDraft = data.status === "draft";
 
   return (
     <div className="max-w-2xl">
@@ -111,23 +110,19 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             Tandai Lunas
           </button>
         )}
-        {isDraft && (
-          <Link
-            href={`/invoices/${invoiceId}/edit`}
-            className="rounded border border-black/20 dark:border-white/20 px-4 py-2 text-sm"
-          >
-            Edit
-          </Link>
-        )}
-        {isDraft && (
-          <button
-            onClick={() => deleteMutation.mutate()}
-            disabled={deleteMutation.isPending}
-            className="rounded border border-red-600 text-red-600 px-4 py-2 text-sm disabled:opacity-50"
-          >
-            Hapus
-          </button>
-        )}
+        <Link
+          href={`/invoices/${invoiceId}/edit`}
+          className="rounded border border-black/20 dark:border-white/20 px-4 py-2 text-sm"
+        >
+          Edit
+        </Link>
+        <button
+          onClick={() => deleteMutation.mutate()}
+          disabled={deleteMutation.isPending}
+          className="rounded border border-red-600 text-red-600 px-4 py-2 text-sm disabled:opacity-50"
+        >
+          Hapus
+        </button>
       </div>
 
       {markPaidMutation.isError && (

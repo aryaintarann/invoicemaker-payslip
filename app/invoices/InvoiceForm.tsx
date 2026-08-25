@@ -15,7 +15,7 @@ export type InvoiceFormValues = {
   projectName: string;
   issueDate: string;
   dueDate: string;
-  status: "draft" | "sent";
+  status: "draft" | "sent" | "paid" | "overdue";
   contractValue: string;
   invoicePercent: string;
   ppnPercent: string;
@@ -173,10 +173,17 @@ export function InvoiceForm({
           <select
             className="border border-black/20 dark:border-white/20 rounded px-3 py-2 bg-transparent"
             value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value as "draft" | "sent" })}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                status: e.target.value as "draft" | "sent" | "paid" | "overdue",
+              })
+            }
           >
             <option value="draft">Draft</option>
             <option value="sent">Terkirim</option>
+            <option value="paid">Lunas</option>
+            <option value="overdue">Jatuh Tempo</option>
           </select>
         </label>
         <label className="flex flex-col gap-1 text-sm">
