@@ -9,7 +9,7 @@ import { terbilang } from "./terbilang";
 
 export type InvoiceTemplateData = {
   entity: "cv" | "op";
-  kind: "dp" | "final";
+  kind: "dp" | "termin1" | "termin2" | "final";
   language: "id" | "en";
   invoiceNumber: string;
   invoiceLabel: string;
@@ -34,6 +34,13 @@ export type InvoiceTemplateData = {
 export class TemplateMissingError extends Error {}
 export class TemplateRenderError extends Error {}
 
+// termin1/termin2 are additional partial-payment installments beyond the
+// original DP — there's no separate .docx layout for them, they render off
+// the same "dp" template file as DP, just with a different invoiceLabel.
+function templateKindFor(kind: InvoiceTemplateData["kind"]): "dp" | "final" {
+  return kind === "final" ? "final" : "dp";
+}
+
 function templatePath(entity: string, language: string, kind: string) {
   return path.join(process.cwd(), "templates/invoice", entity, language, `${kind}.docx`);
 }
@@ -43,10 +50,11 @@ function templatePath(entity: string, language: string, kind: string) {
  * returns the rendered .docx as a Buffer. See templates/invoice/README.md.
  */
 export async function fillInvoiceTemplate(data: InvoiceTemplateData): Promise<Buffer> {
-  const templateFile = templatePath(data.entity, data.language, data.kind);
+  const templateKind = templateKindFor(data.kind);
+  const templateFile = templatePath(data.entity, data.language, templateKind);
   if (!fs.existsSync(templateFile)) {
     throw new TemplateMissingError(
-      `Template invoice belum ditemukan di templates/invoice/${data.entity}/${data.language}/${data.kind}.docx. ` +
+      `Template invoice belum ditemukan di templates/invoice/${data.entity}/${data.language}/${templateKind}.docx. ` +
         "Lihat templates/invoice/README.md."
     );
   }

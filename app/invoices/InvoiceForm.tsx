@@ -16,7 +16,7 @@ export type InvoiceFormValues = {
   clientId: string;
   invoiceNumber: string;
   entity: "cv" | "op";
-  kind: "dp" | "final";
+  kind: "dp" | "termin1" | "termin2" | "final";
   language: "id" | "en";
   invoiceLabel: string;
   clientAttn: string;
@@ -52,6 +52,8 @@ export const emptyInvoiceForm: InvoiceFormValues = {
 
 const kindDefaultLabel: Record<string, string> = {
   dp: "DP (Down Payment)",
+  termin1: "Termin I",
+  termin2: "Termin II",
   final: "Final",
 };
 
@@ -146,11 +148,13 @@ export function InvoiceForm({
                 id="kind"
                 value={form.kind}
                 onChange={(e) => {
-                  const kind = e.target.value as "dp" | "final";
+                  const kind = e.target.value as "dp" | "termin1" | "termin2" | "final";
                   setForm({ ...form, kind, invoiceLabel: kindDefaultLabel[kind] });
                 }}
               >
                 <option value="dp">DP (Down Payment)</option>
+                <option value="termin1">Termin I</option>
+                <option value="termin2">Termin II</option>
                 <option value="final">Final</option>
               </NativeSelect>
             </Field>

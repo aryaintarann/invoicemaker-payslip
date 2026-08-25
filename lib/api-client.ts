@@ -32,7 +32,7 @@ export type Invoice = {
   clientId: number;
   invoiceNumber: string;
   entity: "cv" | "op";
-  kind: "dp" | "final";
+  kind: "dp" | "termin1" | "termin2" | "final";
   language: "id" | "en";
   invoiceLabel: string;
   clientAttn: string | null;

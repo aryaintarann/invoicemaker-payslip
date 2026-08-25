@@ -17,7 +17,7 @@ export const invoiceInput = z.object({
   clientId: z.coerce.number().int().positive(),
   invoiceNumber: z.string().min(1),
   entity: z.enum(["cv", "op"]),
-  kind: z.enum(["dp", "final"]),
+  kind: z.enum(["dp", "termin1", "termin2", "final"]),
   language: z.enum(["id", "en"]).optional().default("id"),
   invoiceLabel: z.string().min(1),
   clientAttn: z.string().optional(),

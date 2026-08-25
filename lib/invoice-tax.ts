@@ -7,14 +7,14 @@
  */
 export function invoiceHasTax(
   entity: "cv" | "op",
-  kind: "dp" | "final",
+  kind: "dp" | "termin1" | "termin2" | "final",
   language: "id" | "en"
 ): boolean {
   return entity === "cv" || (entity === "op" && kind === "final" && language === "en");
 }
 
 /** Default PPN percent: the English "Final" templates use 12% instead of the usual 11%. */
-export function defaultPpnPercent(kind: "dp" | "final", language: "id" | "en"): number {
+export function defaultPpnPercent(kind: "dp" | "termin1" | "termin2" | "final", language: "id" | "en"): number {
   return kind === "final" && language === "en" ? 12 : 11;
 }
 

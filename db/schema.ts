@@ -35,7 +35,7 @@ export const invoiceStatusEnum = pgEnum("invoice_status", [
 ]);
 
 export const invoiceEntityEnum = pgEnum("invoice_entity", ["cv", "op"]);
-export const invoiceKindEnum = pgEnum("invoice_kind", ["dp", "final"]);
+export const invoiceKindEnum = pgEnum("invoice_kind", ["dp", "termin1", "termin2", "final"]);
 export const invoiceLanguageEnum = pgEnum("invoice_language", ["id", "en"]);
 
 export const clients = pgTable("clients", {

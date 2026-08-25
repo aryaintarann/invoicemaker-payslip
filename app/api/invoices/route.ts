@@ -9,7 +9,7 @@ function computeAmounts(input: {
   contractValue: number;
   invoicePercent: number;
   entity: "cv" | "op";
-  kind: "dp" | "final";
+  kind: "dp" | "termin1" | "termin2" | "final";
   language: "id" | "en";
   ppnPercent?: number;
   pphPercent?: number;

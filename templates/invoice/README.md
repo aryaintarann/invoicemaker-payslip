@@ -8,7 +8,11 @@ templates/invoice/{entity}/{language}/{kind}.docx
 
 - `entity`: `cv` (dengan PPN/PPh, ada surat kop) atau `op` (individu, biasanya tanpa PPN/PPh, tanpa kop)
 - `language`: `id` (Indonesia) atau `en` (Inggris)
-- `kind`: `dp` (Down Payment) atau `final`
+- `kind`: file template yang ada di disk, hanya `dp` (Down Payment) atau `final`
+
+## Jenis Pembayaran (4 pilihan di form) vs `kind` (file template)
+
+Form invoice menawarkan 4 jenis pembayaran — **DP**, **Termin I**, **Termin II**, **Final** — tapi hanya ada 2 file template per entity/bahasa. DP, Termin I, dan Termin II semuanya adalah pembayaran parsial (belum lunas) dengan struktur cetak yang identik, jadi ketiganya dirender pakai file `dp.docx` yang sama; hanya `invoiceLabel`-nya yang beda ("DP (Down Payment)", "Termin I", "Termin II"). Hanya **Final** yang dirender pakai `final.docx`. Mapping ini ada di `templateKindFor()` (`lib/docx.ts`) — kalau suatu saat Termin I/II butuh layout Word sendiri, tambahkan file `templates/invoice/{entity}/{language}/termin1.docx` / `termin2.docx` dan ubah mapping tersebut agar tidak lagi jatuh ke `dp.docx`.
 
 ## Status saat ini
 
