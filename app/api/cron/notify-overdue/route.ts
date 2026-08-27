@@ -3,13 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { db } from "@/db";
 import { invoiceFollowups, invoices } from "@/db/schema";
-import { sendWhatsAppNotification, WhatsAppNotifyError } from "@/lib/callmebot";
+import { sendWhatsAppNotification, WhatsAppNotifyError } from "@/lib/whatsapp";
 import { formatCurrency } from "@/lib/format";
 
 // Hit by an external scheduler (Vercel Cron, cron-job.org, Windows Task
 // Scheduler, ...) on a daily schedule with `?secret=CRON_SECRET`. Notifies
-// the admin's own WhatsApp (via CallMeBot) once per calendar day for every
-// invoice still unpaid past its due date - see lib/callmebot.ts for why this
+// the admin's own WhatsApp (via Evolution API) once per calendar day for every
+// invoice still unpaid past its due date - see lib/whatsapp.ts for why this
 // pings the admin rather than the client directly.
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
