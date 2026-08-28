@@ -22,7 +22,11 @@ docker compose version
 
 ## 2. Jalankan Evolution API + Postgres + Redis
 
-Evolution API v2 butuh Postgres dan Redis. Buat folder kerja:
+Evolution API v2 butuh Postgres dan Redis. **Tidak perlu install terpisah** —
+kedua service ikut dijalankan oleh `docker-compose.yml` di bawah sebagai
+container (data disimpan di volume `evolution_pgdata` / `evolution_redis`).
+
+Buat folder kerja:
 
 ```bash
 mkdir ~/evolution && cd ~/evolution
@@ -37,7 +41,7 @@ services:
     image: atendai/evolution-api:v2.1.1
     restart: always
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"   # cukup localhost; Cloudflare Tunnel yang expose ke publik
     env_file:
       - .env
     depends_on:
@@ -102,28 +106,51 @@ docker compose logs -f evolution-api   # cek tidak ada error, Ctrl+C untuk kelua
 curl http://localhost:8080 -H "apikey: GANTI_KEY_RAHASIA_PANJANG"
 ```
 
-## 3. Pasang reverse proxy + HTTPS
+## 3. Expose ke publik via Cloudflare Tunnel
 
-Vercel butuh URL HTTPS publik. Paling ringkas pakai Caddy (auto SSL):
+Domain harus sudah dikelola di Cloudflare (nameserver-nya di Cloudflare).
+Tidak perlu buka port 80/443 di VPS — tunnel yang keluar ke Cloudflare.
 
-```bash
-sudo apt install -y caddy
-```
-
-`/etc/caddy/Caddyfile`:
-
-```
-evo.domainmu.com {
-    reverse_proxy localhost:8080
-}
-```
+Install `cloudflared` di VPS:
 
 ```bash
-sudo systemctl restart caddy
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o cloudflared.deb
+sudo dpkg -i cloudflared.deb
 ```
 
-Pastikan DNS `evo.domainmu.com` A record sudah menunjuk ke IP VPS, dan port
-80/443 terbuka di firewall.
+Login & buat tunnel:
+
+```bash
+cloudflared tunnel login                       # buka URL yang muncul, pilih domain
+cloudflared tunnel create evolution            # catat Tunnel ID / file kredensial di ~/.cloudflared/
+cloudflared tunnel route dns evolution evo.domainmu.com
+```
+
+`~/.cloudflared/config.yml`:
+
+```yaml
+tunnel: evolution
+credentials-file: /root/.cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  - hostname: evo.domainmu.com
+    service: http://localhost:8080
+  - service: http_status:404
+```
+
+Jalankan sebagai service:
+
+```bash
+sudo cloudflared service install
+sudo systemctl start cloudflared
+sudo systemctl status cloudflared
+```
+
+Cek: `curl https://evo.domainmu.com -H "apikey: GANTI_KEY_RAHASIA_PANJANG"`
+harus balas dari Evolution API (bukan error Cloudflare).
+
+> `SERVER_URL` di `.env` (langkah 2) harus sama persis dengan
+> `https://evo.domainmu.com`.
 
 ## 4. Buat instance WhatsApp
 
