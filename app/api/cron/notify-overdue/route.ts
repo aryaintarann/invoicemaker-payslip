@@ -13,7 +13,12 @@ import { formatCurrency } from "@/lib/format";
 // pings the admin rather than the client directly.
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  if (!secret || req.nextUrl.searchParams.get("secret") !== secret) {
+  // Vercel Cron sends `Authorization: Bearer $CRON_SECRET` automatically; manual
+  // calls / other schedulers can pass `?secret=` instead.
+  const provided =
+    req.nextUrl.searchParams.get("secret") ??
+    req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!secret || provided !== secret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

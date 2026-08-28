@@ -236,6 +236,25 @@ Lokal: `npm run dev`, lalu buka
 Untuk mengetes ulang di hari yang sama, hapus baris invoice itu dari tabel
 `invoice_followups` (notifikasi dibatasi 1x per hari).
 
+## 7. Jadwal otomatis (Vercel Cron)
+
+`vercel.json` di root sudah mendefinisikan:
+
+```json
+{ "crons": [{ "path": "/api/cron/notify-overdue", "schedule": "0 0 * * *" }] }
+```
+
+- Jadwal Vercel Cron **selalu UTC**, tidak ada opsi timezone. `0 0 * * *` =
+  00:00 UTC = **08:00 WITA** (WITA = UTC+8). Ubah jam WITA lain: kurangi 8 dari
+  jam UTC, mis. 07:00 WITA → `0 23 * * *`.
+- Vercel plan **Hobby**: cron jalan **1x/hari** dan bisa meleset sampai ~1 jam
+  dari jadwal. Cukup untuk notifikasi harian ini.
+- Vercel otomatis mengirim header `Authorization: Bearer $CRON_SECRET` saat
+  memanggil cron — route menerima ini **atau** `?secret=`. Jadi `CRON_SECRET`
+  cukup di-set di env Vercel; tidak perlu ditaruh di `vercel.json`.
+- Aktif setelah `vercel.json` ter-deploy ke Production. Cek di Vercel →
+  project → Settings → Cron Jobs.
+
 ## Catatan
 
 - Satu invoice dinotifikasi **maksimal sekali per hari kalender** (dicatat di
