@@ -38,7 +38,7 @@ mkdir ~/evolution && cd ~/evolution
 services:
   evolution-api:
     container_name: evolution_api
-    image: atendai/evolution-api:v2.1.1
+    image: evoapicloud/evolution-api:v2.3.7   # image lama atendai/evolution-api sudah dipindah
     restart: always
     ports:
       - "127.0.0.1:8080:8080"   # cukup localhost; Cloudflare Tunnel yang expose ke publik
