@@ -202,6 +202,23 @@ Project → Settings → Environment Variables → isi kelima var di atas →
 
 ## 6. Tes
 
+### 6a. Tes layer Evolution API langsung (paling cepat)
+
+Kirim pesan manual, tidak perlu ada invoice:
+
+```bash
+curl -X POST https://evo.domainmu.com/message/sendText/invoicemaker \
+  -H "apikey: EVOLUTION_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"number":"62812xxxxxxx","text":"tes notif dari Evolution API"}'
+```
+
+- HP dapat pesan → Evolution API + instance + nomor sudah benar.
+- `{"status":"ERROR",...}` / tidak sampai → cek `connectionState` instance
+  (`open`?), apikey, dan format nomor (kode negara, tanpa `+`).
+
+### 6b. Tes lewat endpoint aplikasi
+
 ```bash
 curl "https://appmu.vercel.app/api/cron/notify-overdue?secret=CRON_SECRET"
 ```
@@ -210,8 +227,14 @@ Lokal: `npm run dev`, lalu buka
 `http://localhost:3000/api/cron/notify-overdue?secret=...`
 
 - Respons `{"checked":0,...}` = tidak ada invoice lewat jatuh tempo (normal).
-- Ada invoice overdue → cek WhatsApp di `EVOLUTION_TARGET_NUMBER`.
+- Ada invoice overdue → cek WhatsApp di `EVOLUTION_TARGET_NUMBER`,
+  dan `results[].notified` harus `true`.
 - Gagal kirim → cek field `error` di respons JSON per invoice.
+
+**Bikin data uji:** lewat `npm run db:studio`, ambil satu invoice, set
+`status` = `sent` dan `dueDate` ke tanggal kemarin. Panggil endpoint di atas.
+Untuk mengetes ulang di hari yang sama, hapus baris invoice itu dari tabel
+`invoice_followups` (notifikasi dibatasi 1x per hari).
 
 ## Catatan
 
