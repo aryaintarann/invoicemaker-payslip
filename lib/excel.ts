@@ -84,6 +84,16 @@ function stripTableBorders(zip: PizZip): void {
   );
 }
 
+// The signature block (F17:G17 "Badung, <tanggal>", F18 "Diterima Oleh",
+// F21 employee name) sits in merged F:G cells that are only ~17 chars wide, so
+// the date and longer names clip in both Excel and the PDF. Widen columns F+G.
+function widenSignatureCols(xml: string): string {
+  if (/<col\b[^>]*\bmin="6"/.test(xml)) return xml;
+  const col = '<col min="6" max="7" width="15" customWidth="1"/>';
+  if (xml.includes("<cols>")) return xml.replace("<cols>", `<cols>${col}`);
+  return xml.replace(/(<sheetFormatPr\b[^>]*\/>)/, `$1<cols>${col}</cols>`);
+}
+
 /**
  * Fills templates/slip-gaji/template.xlsx (user-supplied, see
  * templates/slip-gaji/README.md for the exact cell layout it expects) and
@@ -121,7 +131,7 @@ export async function fillPayslipTemplate(data: PayslipTemplateData): Promise<Bu
   xml = setCell(xml, "F17", tanggalTtd);
   xml = setCell(xml, "F21", data.employeeName);
 
-  zip.file(SHEET_PATH, fitToOnePage(xml));
+  zip.file(SHEET_PATH, widenSignatureCols(fitToOnePage(xml)));
   stripTableBorders(zip);
   return zip.generate({ type: "nodebuffer" });
 }
