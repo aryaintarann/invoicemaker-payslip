@@ -4,9 +4,11 @@ import { use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DownloadSimple, PencilSimple } from "@phosphor-icons/react";
+import { DownloadSimple, FilePdf, PencilSimple } from "@phosphor-icons/react";
+import { toast } from "sonner";
 
 import { payslipsApi } from "@/lib/api-client";
+import { downloadViaFetch } from "@/lib/download";
 import { formatCurrency } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,6 +34,12 @@ export default function PayslipDetailPage({ params }: { params: Promise<{ id: st
   const { data } = useQuery({
     queryKey: ["payslips", payslipId],
     queryFn: () => payslipsApi.get(payslipId),
+  });
+
+  const pdfMutation = useMutation({
+    mutationFn: () =>
+      downloadViaFetch(`/api/payslips/${payslipId}/generate?format=pdf`, `slip-gaji-${payslipId}.pdf`),
+    onError: (err) => toast.error((err as Error).message),
   });
 
   const deleteMutation = useMutation({
@@ -85,6 +93,14 @@ export default function PayslipDetailPage({ params }: { params: Promise<{ id: st
         <Button nativeButton={false} render={<a href={`/api/payslips/${payslipId}/generate`} />}>
           <DownloadSimple className="size-4" />
           Download .xlsx
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => pdfMutation.mutate()}
+          disabled={pdfMutation.isPending}
+        >
+          <FilePdf className="size-4" />
+          {pdfMutation.isPending ? "Membuat PDF..." : "Download PDF"}
         </Button>
         <Button variant="outline" nativeButton={false} render={<Link href={`/payslips/${payslipId}/edit`} />}>
           <PencilSimple className="size-4" />

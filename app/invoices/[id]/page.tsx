@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle,
   DownloadSimple,
+  FilePdf,
   PencilSimple,
   UploadSimple,
   Warning,
@@ -14,6 +15,7 @@ import {
 import { toast } from "sonner";
 
 import { InvoiceDocumentType, invoicesApi } from "@/lib/api-client";
+import { downloadViaFetch } from "@/lib/download";
 import { formatCurrency } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -154,6 +156,12 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     onError: (err) => toast.error((err as Error).message),
   });
 
+  const pdfMutation = useMutation({
+    mutationFn: () =>
+      downloadViaFetch(`/api/invoices/${invoiceId}/generate?format=pdf`, `invoice-${invoiceId}.pdf`),
+    onError: (err) => toast.error((err as Error).message),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: () => invoicesApi.remove(invoiceId),
     onSuccess: () => {
@@ -227,6 +235,14 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         <Button nativeButton={false} render={<a href={`/api/invoices/${invoiceId}/generate`} />}>
           <DownloadSimple className="size-4" />
           Download .docx
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => pdfMutation.mutate()}
+          disabled={pdfMutation.isPending}
+        >
+          <FilePdf className="size-4" />
+          {pdfMutation.isPending ? "Membuat PDF..." : "Download PDF"}
         </Button>
         {canMarkPaid && (
           <Button
