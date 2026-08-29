@@ -66,22 +66,79 @@ function fitToOnePage(xml: string): string {
   return xml;
 }
 
-// Blanks the thin-box border (border index 2 in xl/styles.xml) that the
-// template draws around the PENDAPATAN / POTONGAN / TOTAL GAJI rows. Only the
-// table styles (5, 7, 9, 10, 11) reference it; the letterhead edge (border 1)
-// and the bottom rule (border 3) use different borders and stay intact. Done
-// in code so both the .xlsx and the Gotenberg PDF come out borderless there.
-function stripTableBorders(zip: PizZip): void {
-  const styles = zip.file("xl/styles.xml")!.asText();
-  const block = styles.match(/<borders count="\d+">([\s\S]*?)<\/borders>/);
-  if (!block) return;
-  const items = block[1].match(/<border\b[\s\S]*?<\/border>|<border\s*\/>/g) ?? [];
-  if (items.length <= 2) return;
-  items[2] = "<border><left/><right/><top/><bottom/><diagonal/></border>";
-  zip.file(
-    "xl/styles.xml",
-    styles.replace(block[0], `<borders count="${items.length}">${items.join("")}</borders>`)
-  );
+// Blanks every non-empty border in xl/styles.xml: the template drew a thin box
+// around the PENDAPATAN/POTONGAN/TOTAL GAJI rows plus a half-finished outer
+// rule (only right + bottom, and clipping). We want none of those — the full
+// outer box is drawn as a shape in drawOuterBorder(). Also appends a bold-blue
+// right-aligned currency xf for the TOTAL GAJI amount and returns its index.
+function patchStyles(zip: PizZip): number {
+  let styles = zip.file("xl/styles.xml")!.asText();
+
+  const b = styles.match(/<borders count="(\d+)">[\s\S]*?<\/borders>/);
+  if (b) {
+    const empty = "<border><left/><right/><top/><bottom/><diagonal/></border>";
+    styles = styles.replace(b[0], `<borders count="${b[1]}">${empty.repeat(Number(b[1]))}</borders>`);
+  }
+
+  const xf = styles.match(/<cellXfs count="(\d+)">/)!;
+  const totalRightXf = Number(xf[1]);
+  styles = styles
+    .replace(/<cellXfs count="\d+">/, `<cellXfs count="${totalRightXf + 1}">`)
+    .replace(
+      "</cellXfs>",
+      '<xf numFmtId="44" fontId="5" fillId="2" borderId="0" xfId="0" applyNumberFormat="1"' +
+        ' applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="right"/></xf></cellXfs>'
+    );
+
+  zip.file("xl/styles.xml", styles);
+  return totalRightXf;
+}
+
+// #1: extend the TOTAL GAJI blue fill (B16:E16) and right-align the amount in a
+// merged C16:E16 so the whole (overflowing) number sits on the highlight.
+function extendTotalHighlight(xml: string, totalRightXf: number): string {
+  xml = xml.replace(/(<c r="D16"[^>]*?)\ss="\d+"/, '$1 s="10"');
+  xml = xml.replace(/(<c r="E16"[^>]*?)\ss="\d+"/, '$1 s="10"');
+  xml = xml.replace(/(<c r="C16"[^>]*?)\ss="\d+"/, `$1 s="${totalRightXf}"`);
+  if (!xml.includes('ref="C16:E16"')) {
+    xml = xml
+      .replace(/<mergeCells count="(\d+)">/, (_m, c) => `<mergeCells count="${Number(c) + 1}">`)
+      .replace("</mergeCells>", '<mergeCell ref="C16:E16"/></mergeCells>');
+  }
+  return xml;
+}
+
+// #2: draw the full outer box around the slip (A1 top-left to the G/H boundary,
+// bottom of row 23) as a no-fill rectangle shape, so it renders identically in
+// Excel and the Gotenberg PDF and can't clip like the old cell borders did.
+function drawOuterBorder(zip: PizZip): void {
+  const p = "xl/drawings/drawing1.xml";
+  const f = zip.file(p);
+  if (!f) return;
+  const xml = f.asText();
+  if (xml.includes('name="SlipOuterBorder"')) return;
+  const shape =
+    "<xdr:twoCellAnchor>" +
+    "<xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>" +
+    "<xdr:to><xdr:col>7</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>23</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>" +
+    '<xdr:sp macro="" textlink=""><xdr:nvSpPr>' +
+    '<xdr:cNvPr id="101" name="SlipOuterBorder"/><xdr:cNvSpPr/></xdr:nvSpPr>' +
+    '<xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="6900000" cy="5600000"/></a:xfrm>' +
+    '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>' +
+    '<a:noFill/><a:ln w="12700"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln></xdr:spPr>' +
+    "<xdr:txBody><a:bodyPr/><a:lstStyle/><a:p><a:endParaRPr lang=\"en-US\"/></a:p></xdr:txBody>" +
+    "</xdr:sp><xdr:clientData/></xdr:twoCellAnchor>";
+  zip.file(p, xml.replace("</xdr:wsDr>", shape + "</xdr:wsDr>"));
+}
+
+// Pin the print range so fit-to-page scaling can't push the outer box off the
+// edge; row 24 / col I,J stay in range as a thin blank margin around the box.
+function setPrintArea(zip: PizZip): void {
+  const wb = zip.file("xl/workbook.xml")!.asText();
+  if (wb.includes("_xlnm.Print_Area")) return;
+  const dn =
+    '<definedNames><definedName name="_xlnm.Print_Area" localSheetId="0">Sheet1!$A$1:$H$24</definedName></definedNames>';
+  zip.file("xl/workbook.xml", wb.replace("</sheets>", `</sheets>${dn}`));
 }
 
 // The signature block (F17:G17 "Badung, <tanggal>", F18 "Diterima Oleh",
@@ -117,6 +174,7 @@ export async function fillPayslipTemplate(data: PayslipTemplateData): Promise<Bu
 
   const content = fs.readFileSync(TEMPLATE_PATH, "binary");
   const zip = new PizZip(content);
+  const totalRightXf = patchStyles(zip);
   let xml = zip.file(SHEET_PATH)!.asText();
 
   xml = setCell(xml, "A3", tanggal);
@@ -131,7 +189,9 @@ export async function fillPayslipTemplate(data: PayslipTemplateData): Promise<Bu
   xml = setCell(xml, "F17", tanggalTtd);
   xml = setCell(xml, "F21", data.employeeName);
 
+  xml = extendTotalHighlight(xml, totalRightXf);
   zip.file(SHEET_PATH, widenSignatureCols(fitToOnePage(xml)));
-  stripTableBorders(zip);
+  drawOuterBorder(zip);
+  setPrintArea(zip);
   return zip.generate({ type: "nodebuffer" });
 }

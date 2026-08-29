@@ -22,7 +22,11 @@ Jika Anda mengganti template dengan layout baru, cell mapping di atas perlu dise
 
 `lib/excel.ts` juga, saat generate:
 - Menambahkan setelan cetak **"Fit Sheet on One Page"** (`fitToPage` + `pageSetup fitToWidth/fitToHeight`, orientasi portrait) supaya hasil PDF (via Gotenberg) tidak terpotong ke halaman kedua. Kalau template baru sudah punya `pageSetup` sendiri, dibiarkan apa adanya.
-- Mengosongkan **border thin-box** (border index 2 di `xl/styles.xml`) yang mengelilingi baris PENDAPATAN / POTONGAN / TOTAL GAJI, di `.xlsx` maupun PDF. Border lain (kop surat, garis bawah TOTAL GAJI) tidak tersentuh. Kalau template baru menata border berbeda, sesuaikan indeks di `stripTableBorders`.
+- **Mengosongkan semua border sel** di `xl/styles.xml` (grid tabel + garis luar setengah jadi bawaan template yang sempat terpotong), lalu **menggambar kotak border luar penuh** sebagai shape persegi tanpa isian di `drawing1.xml` (A1 sampai batas kolom G/H, bawah baris 23) — `drawOuterBorder`.
+- **Memperlebar highlight biru TOTAL GAJI** (isi B16:E16) dan **merata-kanankan angka** dalam merge `C16:E16` lewat xf baru, supaya seluruh angka yang meluber tetap berada di atas highlight — `patchStyles` + `extendTotalHighlight`.
+- Mengunci **print area** ke `Sheet1!$A$1:$H$24` supaya penskalaan fit-to-page tidak mendorong kotak border keluar halaman.
+
+Kalau template diganti dengan layout baru, sesuaikan referensi baris/kolom di fungsi-fungsi tersebut (`patchStyles`, `extendTotalHighlight`, `drawOuterBorder`, `setPrintArea`).
 
 ## Catatan teknis: kenapa bukan ExcelJS biasa
 
