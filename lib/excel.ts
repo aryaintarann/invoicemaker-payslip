@@ -66,6 +66,24 @@ function fitToOnePage(xml: string): string {
   return xml;
 }
 
+// Blanks the thin-box border (border index 2 in xl/styles.xml) that the
+// template draws around the PENDAPATAN / POTONGAN / TOTAL GAJI rows. Only the
+// table styles (5, 7, 9, 10, 11) reference it; the letterhead edge (border 1)
+// and the bottom rule (border 3) use different borders and stay intact. Done
+// in code so both the .xlsx and the Gotenberg PDF come out borderless there.
+function stripTableBorders(zip: PizZip): void {
+  const styles = zip.file("xl/styles.xml")!.asText();
+  const block = styles.match(/<borders count="\d+">([\s\S]*?)<\/borders>/);
+  if (!block) return;
+  const items = block[1].match(/<border\b[\s\S]*?<\/border>|<border\s*\/>/g) ?? [];
+  if (items.length <= 2) return;
+  items[2] = "<border><left/><right/><top/><bottom/><diagonal/></border>";
+  zip.file(
+    "xl/styles.xml",
+    styles.replace(block[0], `<borders count="${items.length}">${items.join("")}</borders>`)
+  );
+}
+
 /**
  * Fills templates/slip-gaji/template.xlsx (user-supplied, see
  * templates/slip-gaji/README.md for the exact cell layout it expects) and
@@ -104,5 +122,6 @@ export async function fillPayslipTemplate(data: PayslipTemplateData): Promise<Bu
   xml = setCell(xml, "F21", data.employeeName);
 
   zip.file(SHEET_PATH, fitToOnePage(xml));
+  stripTableBorders(zip);
   return zip.generate({ type: "nodebuffer" });
 }
