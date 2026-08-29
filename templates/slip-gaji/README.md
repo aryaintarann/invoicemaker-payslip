@@ -20,6 +20,8 @@ Aplikasi mengisi cell berikut secara langsung berdasarkan koordinat (bukan named
 
 Jika Anda mengganti template dengan layout baru, cell mapping di atas perlu disesuaikan langsung di `lib/excel.ts` (fungsi `fillPayslipTemplate`) — beri tahu saya posisi cell yang baru.
 
+`lib/excel.ts` juga menambahkan setelan cetak **"Fit Sheet on One Page"** (`fitToPage` + `pageSetup fitToWidth/fitToHeight`, orientasi portrait) saat generate, supaya hasil PDF (via Gotenberg) tidak terpotong ke halaman kedua. Kalau template baru sudah punya setelan `pageSetup` sendiri, setelan itu dibiarkan apa adanya.
+
 ## Catatan teknis: kenapa bukan ExcelJS biasa
 
 Template ini punya kop surat berupa **text box** (bukan gambar) berisi alamat/telepon/email, terpisah dari logo (gambar). Library ExcelJS, saat baca lalu tulis ulang file (`readFile` → `writeBuffer`), tidak mendukung text box dan akan **menghilangkannya** — hanya gambar yang dipertahankan. Karena itu `lib/excel.ts` tidak memakai ExcelJS sama sekali untuk mengisi data; sebagai gantinya ia mengedit XML sheet (`xl/worksheets/sheet1.xml`) secara langsung lewat PizZip, cell per cell, sehingga bagian lain file (termasuk kop surat) tidak tersentuh sama sekali.

@@ -45,6 +45,27 @@ function setCell(xml: string, ref: string, value: string | number): string {
   return xml.slice(0, match.index) + newCell + xml.slice(match.index! + match[0].length);
 }
 
+// Makes LibreOffice/Gotenberg print the sheet on a single page instead of
+// spilling columns onto a second page (PDF looked "terpotong"). Injects the
+// two print-config elements Excel would write for "Fit Sheet on One Page";
+// element order matters (sheetPr must lead the worksheet, pageSetup follows
+// pageMargins). Idempotent, and untouched if the template already sets them.
+function fitToOnePage(xml: string): string {
+  if (!/<sheetPr[\s>]/.test(xml)) {
+    xml = xml.replace(
+      /(<worksheet\b[^>]*>)/,
+      '$1<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>'
+    );
+  }
+  if (!/<pageSetup[\s/>]/.test(xml)) {
+    xml = xml.replace(
+      /(<pageMargins\b[^>]*\/>)/,
+      '$1<pageSetup orientation="portrait" fitToWidth="1" fitToHeight="1"/>'
+    );
+  }
+  return xml;
+}
+
 /**
  * Fills templates/slip-gaji/template.xlsx (user-supplied, see
  * templates/slip-gaji/README.md for the exact cell layout it expects) and
@@ -82,6 +103,6 @@ export async function fillPayslipTemplate(data: PayslipTemplateData): Promise<Bu
   xml = setCell(xml, "F17", tanggalTtd);
   xml = setCell(xml, "F21", data.employeeName);
 
-  zip.file(SHEET_PATH, xml);
+  zip.file(SHEET_PATH, fitToOnePage(xml));
   return zip.generate({ type: "nodebuffer" });
 }
