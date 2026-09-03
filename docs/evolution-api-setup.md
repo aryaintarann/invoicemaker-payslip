@@ -85,6 +85,9 @@ LANGUAGE=en
 DATABASE_ENABLED=true
 DATABASE_PROVIDER=postgresql
 DATABASE_CONNECTION_URI=postgresql://evolution:GANTI_PASSWORD_DB@postgres:5432/evolution?schema=public
+# ^ GANTI_PASSWORD_DB harus sama persis dengan POSTGRES_PASSWORD di compose,
+#   dan pakai HANYA huruf+angka. Karakter seperti / @ : ? # % memecah URI ini
+#   (Prisma akan error "P1001 Can't reach database server at ..."). `openssl rand -hex 16` aman.
 DATABASE_CONNECTION_CLIENT_NAME=evolution
 DATABASE_SAVE_DATA_INSTANCE=true
 DATABASE_SAVE_DATA_NEW_MESSAGE=false
